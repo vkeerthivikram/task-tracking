@@ -1,0 +1,77 @@
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+
+// Import database setup
+const { createTables } = require('./db/schema');
+const { seedDatabase } = require('./db/seed');
+
+// Import routes
+const projectsRouter = require('./routes/projects');
+const tasksRouter = require('./routes/tasks');
+
+// Initialize Express app
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Middleware
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  credentials: true
+}));
+
+app.use(express.json());
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
+
+// Initialize database
+try {
+  createTables();
+  seedDatabase();
+} catch (error) {
+  console.error('Database initialization error:', error);
+  process.exit(1);
+}
+
+// API Routes
+app.use('/api/projects', projectsRouter);
+app.use('/api/tasks', tasksRouter);
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ 
+    success: false, 
+    error: { 
+      code: 'NOT_FOUND', 
+      message: 'Endpoint not found' 
+    } 
+  });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Server error:', err.stack);
+  res.status(err.status || 500).json({ 
+    success: false, 
+    error: { 
+      code: err.code || 'INTERNAL_ERROR', 
+      message: err.message || 'Internal server error' 
+    } 
+  });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`API available at http://localhost:${PORT}/api`);
+});

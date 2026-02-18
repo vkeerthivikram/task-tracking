@@ -1,0 +1,25 @@
+{
+  "name": "taskflow",
+  "version": "1.0.0",
+  "description": "A full-stack task tracking and project management application with React frontend and Express backend",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm run dev",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "start": "concurrently \"npm run server\" \"npm run client\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "task-management",
+    "project-management",
+    "react",
+    "express",
+    "sqlite"
+  ],
+  "author": "",
+  "license": "MIT"
+}

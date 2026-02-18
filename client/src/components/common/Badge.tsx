@@ -1,0 +1,164 @@
+import React, { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
+import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+import type { TaskStatus, TaskPriority } from '../../types';
+
+type BadgeVariant = 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
+type BadgeSize = 'sm' | 'md' | 'lg';
+
+interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
+  children: ReactNode;
+  variant?: BadgeVariant;
+  size?: BadgeSize;
+  dot?: boolean;
+  outlined?: boolean;
+}
+
+const variantStyles: Record<BadgeVariant, string> = {
+  default: [
+    'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    'outlined:bg-transparent outlined:border-gray-300 outlined:text-gray-700 dark:outlined:border-gray-600 dark:outlined:text-gray-300',
+  ].join(' '),
+  primary: [
+    'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400',
+    'outlined:bg-transparent outlined:border-primary-500 outlined:text-primary-600 dark:outlined:text-primary-400',
+  ].join(' '),
+  success: [
+    'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    'outlined:bg-transparent outlined:border-green-500 outlined:text-green-600 dark:outlined:text-green-400',
+  ].join(' '),
+  warning: [
+    'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    'outlined:bg-transparent outlined:border-amber-500 outlined:text-amber-600 dark:outlined:text-amber-400',
+  ].join(' '),
+  danger: [
+    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    'outlined:bg-transparent outlined:border-red-500 outlined:text-red-600 dark:outlined:text-red-400',
+  ].join(' '),
+  info: [
+    'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    'outlined:bg-transparent outlined:border-blue-500 outlined:text-blue-600 dark:outlined:text-blue-400',
+  ].join(' '),
+};
+
+const sizeStyles: Record<BadgeSize, string> = {
+  sm: 'px-1.5 py-0.5 text-xs',
+  md: 'px-2 py-0.5 text-xs',
+  lg: 'px-2.5 py-1 text-sm',
+};
+
+export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
+  (
+    {
+      className,
+      children,
+      variant = 'default',
+      size = 'md',
+      dot = false,
+      outlined = false,
+      ...props
+    },
+    ref
+  ) => {
+    const dotColors: Record<BadgeVariant, string> = {
+      default: 'bg-gray-500',
+      primary: 'bg-primary-500',
+      success: 'bg-green-500',
+      warning: 'bg-amber-500',
+      danger: 'bg-red-500',
+      info: 'bg-blue-500',
+    };
+
+    return (
+      <span
+        ref={ref}
+        className={twMerge(
+          clsx(
+            'inline-flex items-center font-medium rounded-full',
+            variantStyles[variant],
+            sizeStyles[size],
+            outlined && 'border',
+            className
+          )
+        )}
+        {...props}
+      >
+        {dot && (
+          <span
+            className={clsx('mr-1.5 h-1.5 w-1.5 rounded-full', dotColors[variant])}
+            aria-hidden="true"
+          />
+        )}
+        {children}
+      </span>
+    );
+  }
+);
+
+Badge.displayName = 'Badge';
+
+// Status Badge Component
+interface StatusBadgeProps extends Omit<BadgeProps, 'variant'> {
+  status: TaskStatus;
+}
+
+const statusVariants: Record<TaskStatus, BadgeVariant> = {
+  backlog: 'default',
+  todo: 'primary',
+  in_progress: 'warning',
+  review: 'info',
+  done: 'success',
+};
+
+const statusLabels: Record<TaskStatus, string> = {
+  backlog: 'Backlog',
+  todo: 'To Do',
+  in_progress: 'In Progress',
+  review: 'Review',
+  done: 'Done',
+};
+
+export const StatusBadge = forwardRef<HTMLSpanElement, StatusBadgeProps>(
+  ({ status, children, ...props }, ref) => {
+    return (
+      <Badge ref={ref} variant={statusVariants[status]} dot {...props}>
+        {children || statusLabels[status]}
+      </Badge>
+    );
+  }
+);
+
+StatusBadge.displayName = 'StatusBadge';
+
+// Priority Badge Component
+interface PriorityBadgeProps extends Omit<BadgeProps, 'variant'> {
+  priority: TaskPriority;
+}
+
+const priorityVariants: Record<TaskPriority, BadgeVariant> = {
+  low: 'default',
+  medium: 'primary',
+  high: 'warning',
+  urgent: 'danger',
+};
+
+const priorityLabels: Record<TaskPriority, string> = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  urgent: 'Urgent',
+};
+
+export const PriorityBadge = forwardRef<HTMLSpanElement, PriorityBadgeProps>(
+  ({ priority, children, ...props }, ref) => {
+    return (
+      <Badge ref={ref} variant={priorityVariants[priority]} dot {...props}>
+        {children || priorityLabels[priority]}
+      </Badge>
+    );
+  }
+);
+
+PriorityBadge.displayName = 'PriorityBadge';
+
+export default Badge;
