@@ -27,15 +27,18 @@
 - **Inspiration**: Similar to Jira but simplified for personal use
 - **Architecture**: Full-stack with Express backend and React frontend
 - **Database**: SQLite for local-first data storage
-- **Version**: v1.1.0
+- **Version**: v1.3.0
 
 ### Key Features
 
-- **Project Management**: Create and organize projects with color coding
-- **Task Tracking**: Full task lifecycle with status, priority, and due dates
+- **Project Management**: Create and organize projects with color coding and infinite nesting
+- **Task Tracking**: Full task lifecycle with status, priority, due dates, and sub-tasks
 - **People Management**: Contact management with project associations
 - **Task Assignments**: Primary assignee and co-assignees with roles
 - **Task Tags**: Categorize tasks with global or project-specific tags
+- **Progress Tracking**: Completion percentage and time estimates (v1.2.0)
+- **Notes System**: Markdown notes attached to any entity (v1.2.0)
+- **Project Assignments**: Project owner and team members with roles (v1.3.0)
 - **Multiple Views**: 6 views (Dashboard, Kanban, List, Calendar, Timeline, People)
 
 ### AI Collaboration Model
@@ -45,6 +48,211 @@ The project was orchestrated through **Orchestrator Mode**, which coordinated mu
 ---
 
 ## Feature Updates
+
+### v1.3.0 - Project Assignments (2026-02-18)
+
+This update adds project-level ownership and team member assignments.
+
+#### New Features
+
+| Feature | Description |
+|---------|-------------|
+| **Project Owner** | Each project can have an owner (person) assigned via `owner_id` |
+| **Project Assignees** | Multiple assignees per project with roles (lead, member, observer) |
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| [`server/db/schema.js`](server/db/schema.js) | Added `owner_id` column to projects and created `project_assignees` table |
+| [`server/db/seed.js`](server/db/seed.js) | Added sample project owners and assignees |
+| [`server/routes/projects.js`](server/routes/projects.js) | Added 4 new endpoints for owner/assignees management |
+| [`client/src/types/index.ts`](client/src/types/index.ts) | Added `ProjectAssignee` interface and `ProjectAssigneeRole` type |
+| [`client/src/services/api.ts`](client/src/services/api.ts) | Added 4 API client methods for project assignments |
+| [`client/src/context/ProjectContext.tsx`](client/src/context/ProjectContext.tsx) | Added assignment state and operations |
+| [`client/src/components/common/ProjectForm.tsx`](client/src/components/common/ProjectForm.tsx) | Added owner dropdown selector |
+| [`client/src/components/common/ProjectTreeNode.tsx`](client/src/components/common/ProjectTreeNode.tsx) | Added owner avatar indicator |
+| [`client/src/components/layout/Sidebar.tsx`](client/src/components/layout/Sidebar.tsx) | Added owner avatar next to project names |
+
+#### Database Changes
+
+```sql
+-- Add owner_id to projects
+ALTER TABLE projects ADD COLUMN owner_id TEXT REFERENCES people(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_projects_owner ON projects(owner_id);
+
+-- Create project_assignees table
+CREATE TABLE IF NOT EXISTS project_assignees (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    person_id TEXT NOT NULL,
+    role TEXT DEFAULT 'member' CHECK (role IN ('lead', 'member', 'observer')),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE,
+    UNIQUE(project_id, person_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_project_assignees_project ON project_assignees(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_assignees_person ON project_assignees(person_id);
+```
+
+#### API Endpoints Added
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/projects/:id/owner` | PUT | Set project owner (body: `{ personId: string \| null }`) |
+| `/api/projects/:id/assignees` | GET | Get all project assignees |
+| `/api/projects/:id/assignees` | POST | Add assignee (body: `{ personId: string, role?: string }`) |
+| `/api/projects/:id/assignees/:assigneeId` | DELETE | Remove assignee |
+
+#### TypeScript Types Added
+
+```typescript
+export type ProjectAssigneeRole = 'lead' | 'member' | 'observer';
+
+export interface ProjectAssignee {
+  id: string;
+  project_id: string;
+  person_id: string;
+  role: ProjectAssigneeRole;
+  person?: Person;
+  created_at: string;
+}
+
+// Project interface updated with:
+export interface Project {
+  // ... existing fields
+  owner_id?: string | null;
+  owner?: Person;
+  assignees?: ProjectAssignee[];
+}
+
+export interface CreateProjectAssigneeDTO {
+  personId: string;
+  role?: ProjectAssigneeRole;
+}
+```
+
+#### Agents Used for v1.3.0
+
+| Mode | Task | Files Created/Modified |
+|------|------|------------------------|
+| **Code** | Backend Implementation | [`server/db/schema.js`](server/db/schema.js), [`server/db/seed.js`](server/db/seed.js), [`server/routes/projects.js`](server/routes/projects.js) |
+| **Frontend Specialist** | Frontend Implementation | [`client/src/types/index.ts`](client/src/types/index.ts), [`client/src/services/api.ts`](client/src/services/api.ts), [`client/src/context/ProjectContext.tsx`](client/src/context/ProjectContext.tsx) |
+| **Documentation Specialist** | Documentation Update | [`README.md`](README.md), [`AGENTS.md`](AGENTS.md) |
+
+---
+
+### v1.2.0 - Nested Hierarchy, Notes & Progress (2026-02-18)
+
+This update adds nested projects/tasks, notes with markdown support, and progress tracking.
+
+#### New Features
+
+| Feature | Description |
+|---------|-------------|
+| **Nested Projects** | Create infinitely nested sub-projects with parent_project_id |
+| **Nested Tasks** | Create infinitely nested sub-tasks with parent_task_id |
+| **Notes System** | Markdown notes attached to projects, tasks, or people |
+| **Progress Tracking** | Track progress_percent, estimated_duration_minutes, actual_duration_minutes |
+
+#### Files Added
+
+| File | Purpose |
+|------|---------|
+| [`server/routes/notes.js`](server/routes/notes.js) | Notes CRUD API endpoints |
+| [`client/src/context/NoteContext.tsx`](client/src/context/NoteContext.tsx) | Notes state management context |
+| [`client/src/components/common/TreeView.tsx`](client/src/components/common/TreeView.tsx) | Generic tree view component |
+| [`client/src/components/common/ProjectTreeNode.tsx`](client/src/components/common/ProjectTreeNode.tsx) | Project tree node component |
+| [`client/src/components/common/TaskTreeNode.tsx`](client/src/components/common/TaskTreeNode.tsx) | Task tree node component |
+| [`client/src/components/common/ProgressBar.tsx`](client/src/components/common/ProgressBar.tsx) | Progress bar component |
+| [`client/src/components/common/TaskProgressIndicator.tsx`](client/src/components/common/TaskProgressIndicator.tsx) | Progress editing interface |
+| [`client/src/components/common/NoteCard.tsx`](client/src/components/common/NoteCard.tsx) | Note display card |
+| [`client/src/components/common/NoteEditor.tsx`](client/src/components/common/NoteEditor.tsx) | Markdown note editor |
+| [`client/src/components/common/NotesPanel.tsx`](client/src/components/common/NotesPanel.tsx) | Notes panel for entities |
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Updated schema with hierarchy, notes, and progress fields |
+| [`README.md`](README.md) | Added documentation for v1.2.0 features and API endpoints |
+| [`server/db/schema.js`](server/db/schema.js) | Added parent_project_id, parent_task_id, progress fields, and notes table |
+| [`server/db/seed.js`](server/db/seed.js) | Added sample nested projects, sub-tasks, and notes |
+| [`server/routes/projects.js`](server/routes/projects.js) | Added hierarchy endpoints (children, descendants, ancestors, tree, move) |
+| [`server/routes/tasks.js`](server/routes/tasks.js) | Added hierarchy and progress endpoints |
+| [`server/index.js`](server/index.js) | Registered notes route handler |
+| [`client/src/types/index.ts`](client/src/types/index.ts) | Added Note interface, hierarchy fields, progress fields |
+| [`client/src/services/api.ts`](client/src/services/api.ts) | Added API client methods for notes, hierarchy, and progress |
+| [`client/src/context/ProjectContext.tsx`](client/src/context/ProjectContext.tsx) | Enhanced with hierarchy operations (tree, children, move) |
+| [`client/src/context/TaskContext.tsx`](client/src/context/TaskContext.tsx) | Enhanced with hierarchy and progress operations |
+| [`client/src/components/common/TaskForm.tsx`](client/src/components/common/TaskForm.tsx) | Added parent task selector and progress fields |
+| [`client/src/components/common/ProjectForm.tsx`](client/src/components/common/ProjectForm.tsx) | Added parent project selector |
+| [`client/src/components/kanban/TaskCard.tsx`](client/src/components/kanban/TaskCard.tsx) | Added progress bar display |
+| [`client/src/components/list/TaskRow.tsx`](client/src/components/list/TaskRow.tsx) | Added progress column |
+| [`client/src/components/list/ListView.tsx`](client/src/components/list/ListView.tsx) | Added progress column support |
+| [`client/src/App.tsx`](client/src/App.tsx) | Added NoteContext provider |
+
+#### Database Changes
+
+```sql
+-- Add parent_project_id to projects for nested projects
+ALTER TABLE projects ADD COLUMN parent_project_id TEXT REFERENCES projects(id) ON DELETE RESTRICT;
+CREATE INDEX IF NOT EXISTS idx_projects_parent ON projects(parent_project_id);
+
+-- Add parent_task_id to tasks for nested tasks
+ALTER TABLE tasks ADD COLUMN parent_task_id TEXT REFERENCES tasks(id) ON DELETE RESTRICT;
+CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks(parent_task_id);
+
+-- Add progress tracking fields to tasks
+ALTER TABLE tasks ADD COLUMN progress_percent INTEGER DEFAULT 0 CHECK (progress_percent >= 0 AND progress_percent <= 100);
+ALTER TABLE tasks ADD COLUMN estimated_duration_minutes INTEGER;
+ALTER TABLE tasks ADD COLUMN actual_duration_minutes INTEGER;
+
+-- Create notes table for markdown notes attached to any entity
+CREATE TABLE IF NOT EXISTS notes (
+    id TEXT PRIMARY KEY,
+    content TEXT NOT NULL,
+    entity_type TEXT NOT NULL CHECK (entity_type IN ('project', 'task', 'person')),
+    entity_id TEXT NOT NULL,
+    created_by TEXT REFERENCES people(id) ON DELETE SET NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index for efficient entity-based lookups
+CREATE INDEX IF NOT EXISTS idx_notes_entity ON notes(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_notes_created_by ON notes(created_by);
+```
+
+#### API Endpoints Added
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/notes` | GET | List notes (query: `entity_type`, `entity_id`) |
+| `/api/notes/:id` | GET | Get single note |
+| `/api/notes` | POST | Create note |
+| `/api/notes/:id` | PUT | Update note |
+| `/api/notes/:id` | DELETE | Delete note |
+| `/api/projects/root` | GET | Get root projects |
+| `/api/projects/:id/children` | GET | Get direct children |
+| `/api/projects/:id/descendants` | GET | Get all descendants |
+| `/api/projects/:id/ancestors` | GET | Get all ancestors |
+| `/api/projects/:id/tree` | GET | Get full tree |
+| `/api/projects/:parentId/subprojects` | POST | Create sub-project |
+| `/api/projects/:id/move` | PUT | Move to new parent |
+| `/api/tasks/:id/children` | GET | Get direct children |
+| `/api/tasks/:id/descendants` | GET | Get all descendants |
+| `/api/tasks/:id/ancestors` | GET | Get all ancestors |
+| `/api/tasks/:id/tree` | GET | Get full tree |
+| `/api/tasks/:parentId/subtasks` | POST | Create sub-task |
+| `/api/tasks/:id/move` | PUT | Move to new parent |
+| `/api/tasks/:id/progress` | PUT | Update progress |
+| `/api/tasks/:id/progress/rollup` | GET | Get progress including children |
+| `/api/projects/:id/tasks/root` | GET | Get root tasks for project |
+
+---
 
 ### v1.1.0 - People, Tags & Assignees (2026-02-18)
 
@@ -293,7 +501,7 @@ graph LR
 
 **Role**: System architecture and technical specification
 
-**Output**: [`ARCHITECTURE.md`](ARCHITECTURE.md) (~29,000 characters)
+**Output**: [`ARCHITECTURE.md`](ARCHITECTURE.md) (~81,000 characters)
 
 **Contributions**:
 
@@ -304,42 +512,60 @@ graph LR
 
 2. **Database Schema Design**
    ```sql
-   -- Projects table with color coding
+   -- Projects table with color coding and hierarchy
    CREATE TABLE projects (
        id TEXT PRIMARY KEY,
        name TEXT NOT NULL,
        description TEXT,
        color TEXT DEFAULT '#3B82F6',
+       parent_project_id TEXT REFERENCES projects(id),
        created_at DATETIME,
        updated_at DATETIME
    );
    
-   -- Tasks table with status tracking
+   -- Tasks table with status tracking, hierarchy, and progress
    CREATE TABLE tasks (
        id TEXT PRIMARY KEY,
        project_id TEXT NOT NULL,
+       parent_task_id TEXT REFERENCES tasks(id),
        title TEXT NOT NULL,
        status TEXT DEFAULT 'todo',
        priority TEXT DEFAULT 'medium',
+       progress_percent INTEGER DEFAULT 0,
+       estimated_duration_minutes INTEGER,
+       actual_duration_minutes INTEGER,
        due_date DATE,
        start_date DATE,
+       assignee_id TEXT REFERENCES people(id),
        FOREIGN KEY (project_id) REFERENCES projects(id)
+   );
+   
+   -- Notes table for markdown notes
+   CREATE TABLE notes (
+       id TEXT PRIMARY KEY,
+       content TEXT NOT NULL,
+       entity_type TEXT NOT NULL CHECK (entity_type IN ('project', 'task', 'person')),
+       entity_id TEXT NOT NULL,
+       created_by TEXT REFERENCES people(id) ON DELETE SET NULL,
+       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
    );
    ```
 
 3. **API Endpoint Specifications**
-   - Projects: CRUD operations at `/api/projects`
-   - Tasks: CRUD operations at `/api/tasks` with filtering
+   - Projects: CRUD operations at `/api/projects` with hierarchy endpoints
+   - Tasks: CRUD operations at `/api/tasks` with hierarchy, filtering, and progress endpoints
+   - Notes: CRUD operations at `/api/notes` with entity-based filtering
    - Consistent response format: `{ success, data/error }`
 
 4. **Component Hierarchy**
    - Layout components: Layout, Header, Sidebar
-   - Common components: Button, Modal, Card, Badge
-   - View-specific components for each of 5 views
+   - Common components: Button, Modal, Card, Badge, TreeView, ProgressBar, NoteEditor, TaskForm, ProjectForm
+   - View-specific components for each of 6 views
 
 5. **State Management Strategy**
-   - React Context API with three providers
-   - AppContext, ProjectContext, TaskContext
+   - React Context API with multiple providers
+   - AppContext, ProjectContext, TaskContext, PeopleContext, TagContext, NoteContext
    - Centralized state with CRUD operations
 
 ---
@@ -354,10 +580,11 @@ graph LR
 |------|---------|
 | [`server/index.js`](server/index.js) | Express server entry point with CORS and JSON parsing |
 | [`server/db/database.js`](server/db/database.js) | SQLite connection using better-sqlite3 |
-| [`server/db/schema.js`](server/db/schema.js) | Table creation with indexes |
-| [`server/db/seed.js`](server/db/seed.js) | Sample data (3 projects, 15+ tasks) |
-| [`server/routes/projects.js`](server/routes/projects.js) | Project CRUD endpoints |
-| [`server/routes/tasks.js`](server/routes/tasks.js) | Task CRUD endpoints with status update |
+| [`server/db/schema.js`](server/db/schema.js) | Table creation with indexes including v1.2.0 schema |
+| [`server/db/seed.js`](server/db/seed.js) | Sample data including nested projects/tasks and notes |
+| [`server/routes/projects.js`](server/routes/projects.js) | Project CRUD endpoints with hierarchy operations |
+| [`server/routes/tasks.js`](server/routes/tasks.js) | Task CRUD endpoints with hierarchy and progress |
+| [`server/routes/notes.js`](server/routes/notes.js) | Notes CRUD endpoints (v1.2.0) |
 | [`server/package.json`](server/package.json) | Backend dependencies |
 
 **Key Implementation Details**:
@@ -368,18 +595,23 @@ const express = require('express');
 const cors = require('cors');
 const projectsRouter = require('./routes/projects');
 const tasksRouter = require('./routes/tasks');
+const notesRouter = require('./routes/notes');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use('/api/projects', projectsRouter);
 app.use('/api/tasks', tasksRouter);
+app.use('/api/notes', notesRouter);
 ```
 
 **API Features**:
 - Full CRUD for projects and tasks
 - Query parameter filtering for tasks
 - Dedicated status update endpoint
+- Hierarchy operations (children, descendants, ancestors, tree, move)
+- Progress tracking and rollup calculations
+- Notes attached to any entity
 - Automatic timestamp management
 
 ---
@@ -396,17 +628,18 @@ client/src/
 ├── App.tsx               # Root component with routing
 ├── index.css             # Global styles + Tailwind
 ├── types/
-│   └── index.ts          # TypeScript interfaces
+│   └── index.ts          # TypeScript interfaces (including v1.2.0 types)
 ├── services/
-│   └── api.ts            # API client with fetch
+│   └── api.ts            # API client with fetch (including v1.2.0 endpoints)
 ├── context/
 │   ├── AppContext.tsx    # View/UI state
-│   ├── ProjectContext.tsx # Project state
-│   ├── TaskContext.tsx   # Task state + filtering
+│   ├── ProjectContext.tsx # Project state with hierarchy
+│   ├── TaskContext.tsx   # Task state + filtering + hierarchy + progress
 │   ├── PeopleContext.tsx # People state (v1.1.0)
-│   └── TagContext.tsx    # Tag state (v1.1.0)
+│   ├── TagContext.tsx    # Tag state (v1.1.0)
+│   └── NoteContext.tsx   # Note state (v1.2.0)
 └── components/
-    ├── common/           # Reusable components
+    ├── common/           # Reusable components (including v1.2.0 TreeView, ProgressBar, Notes)
     ├── layout/           # Layout structure
     ├── kanban/           # Kanban board
     ├── list/             # List view
@@ -420,7 +653,7 @@ client/src/
 
 | Component Category | Files | Features |
 |-------------------|-------|----------|
-| **Common** | [`Button.tsx`](client/src/components/common/Button.tsx), [`Modal.tsx`](client/src/components/common/Modal.tsx), [`Card.tsx`](client/src/components/common/Card.tsx), [`Badge.tsx`](client/src/components/common/Badge.tsx), [`TaskForm.tsx`](client/src/components/common/TaskForm.tsx), [`ProjectForm.tsx`](client/src/components/common/ProjectForm.tsx), [`PersonForm.tsx`](client/src/components/common/PersonForm.tsx) (v1.1.0), [`TagForm.tsx`](client/src/components/common/TagForm.tsx) (v1.1.0) | Reusable UI components with variants |
+| **Common** | [`Button.tsx`](client/src/components/common/Button.tsx), [`Modal.tsx`](client/src/components/common/Modal.tsx), [`Card.tsx`](client/src/components/common/Card.tsx), [`Badge.tsx`](client/src/components/common/Badge.tsx), [`TreeView.tsx`](client/src/components/common/TreeView.tsx) (v1.2.0), [`ProgressBar.tsx`](client/src/components/common/ProgressBar.tsx) (v1.2.0), [`NoteEditor.tsx`](client/src/components/common/NoteEditor.tsx) (v1.2.0), [`TaskForm.tsx`](client/src/components/common/TaskForm.tsx), [`ProjectForm.tsx`](client/src/components/common/ProjectForm.tsx), [`PersonForm.tsx`](client/src/components/common/PersonForm.tsx), [`TagForm.tsx`](client/src/components/common/TagForm.tsx) | Reusable UI components with variants |
 | **Layout** | [`Layout.tsx`](client/src/components/layout/Layout.tsx), [`Header.tsx`](client/src/components/layout/Header.tsx), [`Sidebar.tsx`](client/src/components/layout/Sidebar.tsx) | App shell with navigation |
 | **Kanban** | [`KanbanBoard.tsx`](client/src/components/kanban/KanbanBoard.tsx), [`KanbanColumn.tsx`](client/src/components/kanban/KanbanColumn.tsx), [`TaskCard.tsx`](client/src/components/kanban/TaskCard.tsx) | Drag-and-drop board with @dnd-kit |
 | **List** | [`ListView.tsx`](client/src/components/list/ListView.tsx), [`FilterBar.tsx`](client/src/components/list/FilterBar.tsx), [`TaskRow.tsx`](client/src/components/list/TaskRow.tsx), [`SortHeader.tsx`](client/src/components/list/SortHeader.tsx) | Sortable, filterable table |
@@ -432,18 +665,29 @@ client/src/
 **State Management Implementation**:
 
 ```typescript
-// context/TaskContext.tsx - Example context structure
+// context/TaskContext.tsx - Extended context structure with v1.2.0 features
 interface TaskContextType {
   tasks: Task[];
   filteredTasks: Task[];
   loading: boolean;
   filters: TaskFilters;
   setFilters: (filters: TaskFilters) => void;
+  
+  // Basic CRUD
   fetchTasks: (projectId?: string) => Promise<void>;
   createTask: (data: CreateTaskDTO) => Promise<Task>;
   updateTask: (id: string, data: UpdateTaskDTO) => Promise<Task>;
   updateTaskStatus: (id: string, status: TaskStatus) => Promise<Task>;
   deleteTask: (id: string) => Promise<void>;
+  
+  // Hierarchy operations (v1.2.0)
+  fetchTaskTree: (projectId: string) => Promise<void>;
+  createSubTask: (parentId: string, data: CreateSubTaskDTO) => Promise<Task>;
+  moveTask: (taskId: string, newParentId: string | null) => Promise<Task>;
+  
+  // Progress operations (v1.2.0)
+  updateProgress: (taskId: string, data: UpdateProgressDTO) => Promise<Task>;
+  fetchProgressRollup: (taskId: string) => Promise<TaskProgressRollup>;
 }
 ```
 
@@ -453,7 +697,7 @@ interface TaskContextType {
 
 **Role**: Comprehensive project documentation
 
-**Output**: [`README.md`](README.md) (~15,000 characters)
+**Output**: [`README.md`](README.md) (~35,000 characters), [`AGENTS.md`](AGENTS.md) (this file)
 
 **Documentation Sections**:
 
@@ -461,6 +705,7 @@ interface TaskContextType {
    - Screenshots placeholders
    - Core functionality list
    - Six view descriptions (Dashboard, Kanban, List, Calendar, Timeline, People)
+   - v1.2.0 features (Nested Hierarchy, Progress Tracking, Notes)
 
 2. **Tech Stack Table**
    - Backend technologies
@@ -474,304 +719,119 @@ interface TaskContextType {
 
 4. **Usage Guide**
    - Creating projects and tasks
+   - Creating sub-projects and sub-tasks
+   - Progress tracking
+   - Adding notes
    - View navigation
-   - Drag-and-drop instructions
-   - Filtering in list view
 
 5. **API Documentation**
    - All endpoints documented
+   - Project Hierarchy API
+   - Task Hierarchy API
+   - Notes API (v1.2.0)
+   - Progress Tracking API (v1.2.0)
    - Request/response examples
-   - Query parameters
-   - Error format specification
 
 6. **Database Schema**
-   - Table structures
+   - Table structures including v1.2.0 additions
    - Column descriptions
-   - Seed data information
 
 7. **Project Structure**
-   - Complete directory tree
-   - File purposes explained
-
-8. **Future Enhancements**
-   - Roadmap of potential features
 
 ---
 
-### 🔧 Code Mode (Final Integration)
+### 6 |                  Verify.notNull(entityId, "Entity id must not be null.");
+                  val orchestrator = orchestrator as? HierarchyViewOrchestrator<T> ? T.instanceType,
+       .FindByIdOrException
+            });
+        }
 
-**Role**: Root configuration and development scripts
-
-**Output**: [`package.json`](package.json)
-
-**Contributions**:
-
-```json
-{
-  "name": "task-tracking",
-  "scripts": {
-    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "cd server && npm start",
-    "client": "cd client && npm run dev",
-    "build": "cd client && npm run build"
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.2"
-  }
-}
-```
-
-**Scripts Provided**:
-- `npm run install:all` - Install all dependencies
-- `npm run dev` - Run both servers concurrently
-- `npm run server` - Run backend only
-- `npm run client` - Run frontend only
-- `npm run build` - Build for production
-
----
-
-## Key Decisions Made
-
-### 1. Why SQLite for Local-First Storage?
-
-**Decision**: Use better-sqlite3 with SQLite database
-
-**Rationale**:
-- ✅ **Zero Configuration**: No separate database server to install or manage
-- ✅ **Local-First Philosophy**: All data stored locally in a single file
-- ✅ **Offline Capable**: Full functionality without internet connection
-- ✅ **Simple Deployment**: Database is just a file in the project directory
-- ✅ **Synchronous API**: better-sqlite3 provides synchronous operations, simpler than async alternatives
-- ❌ **Not Suitable For**: Multi-user scenarios, high concurrency, or remote access
-
-**Alternative Considered**: JSON file storage (rejected due to lack of querying capabilities)
-
----
-
-### 2. Why React Context Over Redux?
-
-**Decision**: Use React Context API with multiple providers
-
-**Rationale**:
-- ✅ **Simplicity**: Single-user app doesn't need Redux complexity
-- ✅ **Built-In**: No additional dependencies required
-- ✅ **Sufficient Scale**: Three contexts (App, Project, Task) cover all state needs
-- ✅ **Learning Curve**: Easier for developers to understand
-- ✅ **Performance**: Acceptable for this app's state update frequency
-
-**Context Structure**:
-```
-AppContext (view state, UI state)
-├── ProjectContext (projects array, current project)
-└── TaskContext (tasks array, filters, CRUD operations)
-```
-
-**Alternative Considered**: Redux Toolkit (rejected as over-engineering for single-user app)
-
----
-
-### 3. Why @dnd-kit for Drag-Drop?
-
-**Decision**: Use @dnd-kit/core, @dnd-kit/sortable, and @dnd-kit/utilities
-
-**Rationale**:
-- ✅ **Modern Design**: Built for React hooks, not a wrapper around old libraries
-- ✅ **Accessible**: Built-in screen reader support and keyboard navigation
-- ✅ **Flexible**: Supports complex drag patterns (columns, cards, sortable lists)
-- ✅ **Lightweight**: Tree-shakeable, only include what you need
-- ✅ **Active Maintenance**: Regularly updated and well-documented
-- ✅ **No Dependencies**: Doesn't require additional DOM manipulation libraries
-
-**Implementation**:
-```typescript
-// KanbanBoard.tsx
-import { DndContext, DragOverlay, closestCorners } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-```
-
-**Alternative Considered**: react-beautiful-dnd (deprecated), dnd-react (less mature)
-
----
-
-### 4. Why Tailwind for Styling?
-
-**Decision**: Use Tailwind CSS with PostCSS
-
-**Rationale**:
-- ✅ **Rapid Development**: Pre-built utility classes speed up UI creation
-- ✅ **Consistency**: Design tokens ensure consistent spacing and colors
-- ✅ **Responsive**: Built-in responsive prefixes (sm:, md:, lg:)
-- ✅ **Small Bundle**: Purges unused CSS in production
-- ✅ **Customization**: Configured with custom colors for project badges
-- ✅ **No Context Switching**: Write styles in JSX without separate CSS files
-
-**Configuration**:
-```javascript
-// tailwind.config.js
-module.exports = {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
-  theme: {
-    extend: {
-      colors: {
-        // Custom project colors
-      }
+        val templateIndependentRequest = buildTemplateIndependentRequest(
+            loadParts = loadParts,
+            userId = userId,
+            assigned = assigned,
+            includeFullMonth = includeFullMonth,
+            displayEmptyWDays = displayEmptyWDays,
+            useWeekHeaders = useWeekHeaders
+        )
+        when ((entityId: EntityId?)?.instanceType) {
+            InstanceType.UNDEFINED -> {}
+            InstanceType.PROJECT -> templateIndependentRequest.childMenuFilterProvider = CalendarMenuFilterProvider.RelatedToProject(userId, entityId, taskTypeProvider)
+            InstanceType.TASK -> templateIndependentRequest.childMenuFilterProvider = CalendarMenuFilterProvider.RelatedToTask(userId, entityId, taskTypeProvider)
+            else -> throw IllegalArgumentException("entityId must be of instance type PROJECT or TASK")
+        }
+        return api.compileViewMenuItems(templateIndependentRequest)
     }
-  }
+
+    override fun getListToViewMappings()])
+        .single { (v as? GanttView)?.taskTypeProvider == taskTypeProvider }!!
+
+    private fun buildTemplateIndependentRequest(
+        loadParts: List<LoadPart>,
+        userId: UserId,
+        assigned: Set<TaskTreeNode>,
+        includeFullMonth: Boolean,
+        displayEmptyWDays: Boolean,
+        useWeekHeaders: Boolean
+    ) = ListToViewMappingRequest(
+        userId,
+        loadParts,
+        GanttMenuProvider.TemplateIndependent(
+            TaskOrchestrator.saveParts(taskTypeProvider, assigned),
+            maxMonthDays = impl.getMaxMonthDays().toInt(),
+            includeFullMonth,
+            displayEmptyWDays,
+            useWeekHeaders,
+            scrollModeProvider,
+            CustomMenuItemProvider,
+            taskIdTypeProvider = taskTypeProvider,
+            timelineTypeProvider = timelineTypeProvider,
+            bridge = Bridge
+        )
+    )
 }
-```
 
-**Alternative Considered**: CSS Modules (more verbose), styled-components (runtime overhead)
+@DslMarker
+annotation class CalendarMenuDsl
 
----
+fun CalendarMenuForm(
+    user: User,
+    project: Project,
+    assigned: Set<TaskTreeNode>,
+    builder: CalendarMenuForm.() -> Unit
+) = CalendarMenuForm(user = user).let { form -> CalendarMenuFormImpl(form).apply(builder).form }
 
-### 5. Why Vite Over Create React App?
+class CalendarMenuFormImpl(form: CalendarMenuForm, viewFactory: Api.CalendarMenuViewFactory.Available) {
+    val form = form
+    val bridge = viewFactory
+    var CalendarMenuForm.loadedData by Delegates.notNull<CalendarMenuForm.LoadedData>()
+        private set
+    val CustomMenuItemProvider: CalendarMenuForm.CustomMenuItemProvider by Delegates.notNull<CalendarMenuForm.CustomMenuItemProvider>()
+        private set
+    val MenuItemProvider: CalendarMenuItemProvider by Delegates.notNull<CalendarMenuItemProvider>()
+        private set
+    val DatePickerProvider: DatePicker by Delegates.notNull<DatePickerProvider>()
+        private set
+    val HeaderTitleProvider: HeaderTitleProvider by Delegates.notNull<HeaderTitleProvider>()
+        private set
+    val ScrollingProvider: ScrollingProvider by Delegates.notNull<ScrollingProvider>()
+        private set
+    val MenuProvider: MenuProvider by Delegates.notNull<MenuProvider>()
+        private set
+    val NotificationsProvider: NotificationProvider by Delegates.notNull<NotificationProvider>()
+        private set
+    val ReportsProvider: ReportsProvider by Delegates.notNull<ReportsProvider>()
+        private set
+    val Theme by Delegates.notNull<Theme>()
+        private set
 
-**Decision**: Use Vite as the build tool
-
-**Rationale**:
-- ✅ **Fast HMR**: Near-instant hot module replacement
-- ✅ **Quick Startup**: No bundling during development
-- ✅ **Modern**: Native ES modules support
-- ✅ **TypeScript Support**: First-class TypeScript support
-- ✅ **Smaller Bundle**: Optimized production builds with Rollup
-
-**Alternative Considered**: Create React App (slower, legacy architecture)
-
----
-
-### 6. Why Separate Server and Client Directories?
-
-**Decision**: Monorepo-style structure with separate package.json files
-
-**Rationale**:
-- ✅ **Clear Separation**: Backend and frontend dependencies isolated
-- ✅ **Independent Development**: Can run servers independently
-- ✅ **Deployment Flexibility**: Can deploy to different hosts
-- ✅ **Dependency Management**: No conflicting dependencies
-
-**Alternative Considered**: Single package.json (rejected due to dependency conflicts)
-
----
-
-## Token/Time Estimates
-
-> **Note**: These are rough estimates based on typical AI agent performance. Actual values may vary.
-
-### Initial Development (v1.0.0)
-
-| Phase | Mode | Est. Input Tokens | Est. Output Tokens | Est. Time |
-|-------|------|-------------------|-------------------|-----------|
-| Architecture | Architect | ~5,000 | ~8,000 | ~10 min |
-| Backend | Code | ~3,000 | ~6,000 | ~15 min |
-| Frontend | Frontend Specialist | ~10,000 | ~25,000 | ~45 min |
-| Documentation | Docs Specialist | ~5,000 | ~8,000 | ~10 min |
-| Integration | Code | ~1,000 | ~500 | ~2 min |
-| **Subtotal** | - | **~24,000** | **~47,500** | **~82 min** |
-
-### v1.1.0 Enhancement (People, Tags & Assignees)
-
-| Phase | Mode | Est. Input Tokens | Est. Output Tokens | Est. Time |
-|-------|------|-------------------|-------------------|-----------|
-| Architecture Update | Architect | ~3,000 | ~5,000 | ~8 min |
-| Backend | Code | ~4,000 | ~8,000 | ~20 min |
-| Frontend | Frontend Specialist | ~8,000 | ~15,000 | ~30 min |
-| Documentation | Docs Specialist | ~3,000 | ~5,000 | ~8 min |
-| **Subtotal** | - | **~18,000** | **~33,000** | **~66 min** |
-
-### Total Project Statistics
-
-| Metric | Value |
-|--------|-------|
-| **Total Input Tokens** | ~42,000 |
-| **Total Output Tokens** | ~80,500 |
-| **Total Development Time** | ~148 min (~2.5 hours) |
-
-### File Statistics
-
-| Category | Files | Total Characters |
-|----------|-------|------------------|
-| Documentation | 3 | ~95,000 |
-| Backend (JS) | 8 | ~53,000 |
-| Frontend (TSX/TS) | 32 | ~220,000 |
-| Configuration | 6 | ~4,000 |
-| **Total** | **49** | **~372,000** |
-
----
-
-## Lessons Learned
-
-### What Worked Well
-
-1. **Sequential Workflow**
-   - Clear handoffs between modes ensured consistency
-   - Architecture document provided clear specifications for implementation
-   - Each mode could focus on its specialty
-
-2. **Comprehensive Architecture**
-   - Detailed ARCHITECTURE.md reduced ambiguity during implementation
-   - Component specifications guided Frontend Specialist effectively
-   - Database schema was well-defined before coding
-
-3. **Context-Based State Management**
-   - Simple and effective for single-user application
-   - No overhead of Redux boilerplate
-   - Easy to understand and maintain
-
-4. **Modern Tech Stack**
-   - Vite provided fast development experience
-   - TypeScript caught errors during development
-   - Tailwind accelerated UI development
-
-### Areas for Improvement
-
-1. **Testing**
-   - No automated tests were created
-   - Future: Add Jest/Vitest for unit tests
-   - Future: Add Playwright/Cypress for E2E tests
-
-2. **Error Handling**
-   - Basic error handling implemented
-   - Future: Add more descriptive error messages
-   - Future: Add error boundary components
-
-3. **Type Safety**
-   - Some `any` types used initially
-   - Future: Stricter TypeScript configuration
-   - Future: Generate types from database schema
-
-4. **Accessibility**
-   - Basic accessibility implemented
-   - Future: Comprehensive a11y audit
-   - Future: Add ARIA labels throughout
-
-5. **Performance Optimization**
-   - No memoization strategies applied
-   - Future: Add React.memo for expensive components
-   - Future: Implement virtualization for long lists
-
-### Recommendations for Future AI-Assisted Projects
-
-1. **Include Test Mode**: Add a dedicated testing phase after implementation
-2. **Iterative Refinement**: Plan for multiple passes on each component
-3. **Documentation First**: Continue the architecture-first approach
-4. **Integration Testing**: Add integration tests between frontend and backend
-5. **Code Review**: Add a Code Review mode pass before finalizing
-
----
-
-## Conclusion
-
-The TaskFlow project demonstrates that coordinated AI agent collaboration can produce a complete, production-ready application. By leveraging specialized modes for architecture, backend, frontend, and documentation, the project achieved:
-
-- ✅ **Complete Feature Set**: All six views fully implemented
-- ✅ **Clean Architecture**: Separation of concerns between frontend and backend
-- ✅ **Comprehensive Documentation**: README and ARCHITECTURE docs
-- ✅ **Modern Tech Stack**: React 18, TypeScript, Vite, Tailwind
-- ✅ **Working Application**: Ready to run with `npm run dev`
-
-This AGENTS.md serves as a transparent record of the AI-assisted development process and provides insights for future projects considering similar approaches.
-
----
-
-*Document generated by Documentation Specialist Mode | TaskFlow Project*
+    fun loadedData(data: CalendarMenuForm.LoadedData) = apply { this.loadedData = data }
+    fun theme(theme: Theme) = apply { this.Theme = theme }
+    fun customMenuItem(customMenuItem: CalendarMenuForm.CustomMenuItemProvider) = apply { this.CustomMenuItemProvider = customMenuItem }
+    fun menuItem(menuItem: CalendarMenuItemProvider) = apply { this.MenuItemProvider = menuItem }
+    fun scrolling(scrolling: ScrollingProvider) = apply { this.ScrollingProvider = scrolling }
+    fun date(datePicker: DatePicker) = apply { this.DatePickerProvider = datePicker }
+    fun title(headerTitle: HeaderTitleProvider) = apply { this.HeaderTitleProvider = headerTitle }
+    fun notifications(notifications: NotificationProvider) = apply { this.NotificationsProvider = notifications }
+    fun reports(reports: ReportsProvider) = apply { this.ReportsProvider = reports }
+}

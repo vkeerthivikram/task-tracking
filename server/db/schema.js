@@ -85,6 +85,18 @@ function createTables() {
     )
   `);
 
+  // Notes table for attaching notes to projects, tasks, and people
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS notes (
+      id TEXT PRIMARY KEY,
+      content TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // Create indexes for performance
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
@@ -96,13 +108,16 @@ function createTables() {
     CREATE INDEX IF NOT EXISTS idx_task_assignees_task_id ON task_assignees(task_id);
     CREATE INDEX IF NOT EXISTS idx_task_assignees_person_id ON task_assignees(person_id);
     CREATE INDEX IF NOT EXISTS idx_task_tags_task_id ON task_tags(task_id);
-    CREATE INDEX IF NOT EXISTS idx_task_tags_tag_id ON task_tags(tag_id)
+    CREATE INDEX IF NOT EXISTS idx_task_tags_tag_id ON task_tags(tag_id);
+    CREATE INDEX IF NOT EXISTS idx_notes_entity ON notes(entity_type, entity_id)
   `);
 
+  // ==================== MIGRATION: Add v1.1.0 columns ====================
+  
   // Add assignee_id column to tasks table if it doesn't exist
   try {
-    const tableInfo = db.prepare('PRAGMA table_info(tasks)').all();
-    const hasAssigneeId = tableInfo.some(col => col.name === 'assignee_id');
+    const taskTableInfo = db.prepare('PRAGMA table_info(tasks)').all();
+    const hasAssigneeId = taskTableInfo.some(col => col.name === 'assignee_id');
     
     if (!hasAssigneeId) {
       db.exec(`ALTER TABLE tasks ADD COLUMN assignee_id TEXT REFERENCES people(id)`);
@@ -111,6 +126,96 @@ function createTables() {
     }
   } catch (error) {
     console.error('Error adding assignee_id column:', error.message);
+  }
+
+  // ==================== MIGRATION: Add v1.2.0 columns ====================
+  
+  // Add parent_project_id column to projects table for project hierarchy
+  try {
+    const projectTableInfo = db.prepare('PRAGMA table_info(projects)').all();
+    const hasParentProjectId = projectTableInfo.some(col => col.name === 'parent_project_id');
+    
+    if (!hasParentProjectId) {
+      db.exec(`ALTER TABLE projects ADD COLUMN parent_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL`);
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_parent_id ON projects(parent_project_id)`);
+      console.log('Added parent_project_id column to projects table');
+    }
+  } catch (error) {
+    console.error('Error adding parent_project_id column:', error.message);
+  }
+
+  // Add hierarchy and progress columns to tasks table
+  try {
+    const taskTableInfo = db.prepare('PRAGMA table_info(tasks)').all();
+    
+    // Add parent_task_id for task hierarchy
+    const hasParentTaskId = taskTableInfo.some(col => col.name === 'parent_task_id');
+    if (!hasParentTaskId) {
+      db.exec(`ALTER TABLE tasks ADD COLUMN parent_task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL`);
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_tasks_parent_id ON tasks(parent_task_id)`);
+      console.log('Added parent_task_id column to tasks table');
+    }
+    
+    // Add progress_percent for progress tracking
+    const hasProgressPercent = taskTableInfo.some(col => col.name === 'progress_percent');
+    if (!hasProgressPercent) {
+      db.exec(`ALTER TABLE tasks ADD COLUMN progress_percent INTEGER DEFAULT 0`);
+      console.log('Added progress_percent column to tasks table');
+    }
+    
+    // Add estimated_duration_minutes for time estimation
+    const hasEstimatedDuration = taskTableInfo.some(col => col.name === 'estimated_duration_minutes');
+    if (!hasEstimatedDuration) {
+      db.exec(`ALTER TABLE tasks ADD COLUMN estimated_duration_minutes INTEGER`);
+      console.log('Added estimated_duration_minutes column to tasks table');
+    }
+    
+    // Add actual_duration_minutes for time tracking
+    const hasActualDuration = taskTableInfo.some(col => col.name === 'actual_duration_minutes');
+    if (!hasActualDuration) {
+      db.exec(`ALTER TABLE tasks ADD COLUMN actual_duration_minutes INTEGER`);
+      console.log('Added actual_duration_minutes column to tasks table');
+    }
+  } catch (error) {
+    console.error('Error adding v1.2.0 task columns:', error.message);
+  }
+
+  // ==================== MIGRATION: Add v1.3.0 columns ====================
+  
+  // Add owner_id column to projects table for project ownership
+  try {
+    const projectTableInfo = db.prepare('PRAGMA table_info(projects)').all();
+    const hasOwnerId = projectTableInfo.some(col => col.name === 'owner_id');
+    
+    if (!hasOwnerId) {
+      db.exec(`ALTER TABLE projects ADD COLUMN owner_id TEXT REFERENCES people(id) ON DELETE SET NULL`);
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_owner_id ON projects(owner_id)`);
+      console.log('Added owner_id column to projects table');
+    }
+  } catch (error) {
+    console.error('Error adding owner_id column:', error.message);
+  }
+
+  // Create project_assignees table for project team members
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS project_assignees (
+        id TEXT PRIMARY KEY,
+        project_id INTEGER NOT NULL,
+        person_id TEXT NOT NULL,
+        role TEXT DEFAULT 'member' CHECK (role IN ('lead', 'member', 'observer')),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+        FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE,
+        UNIQUE(project_id, person_id)
+      )
+    `);
+    
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_project_assignees_project_id ON project_assignees(project_id)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_project_assignees_person_id ON project_assignees(person_id)`);
+    console.log('Created project_assignees table');
+  } catch (error) {
+    console.error('Error creating project_assignees table:', error.message);
   }
 
   console.log('Database tables created successfully');

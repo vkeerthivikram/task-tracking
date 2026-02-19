@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
-import type { Task, TaskFilters, CreateTaskDTO, UpdateTaskDTO, TaskStatus } from '../types';
+import type { Task, TaskFilters, CreateTaskDTO, UpdateTaskDTO, TaskStatus, TreeNode, TaskProgressRollup, UpdateTaskProgressDTO } from '../types';
 import * as api from '../services/api';
 
 interface TaskContextType {
@@ -32,6 +32,17 @@ interface TaskContextType {
   // Tag Actions
   addTagToTask: (taskId: number, tagId: number) => Promise<void>;
   removeTagFromTask: (taskId: number, tagId: number) => Promise<void>;
+  
+  // Tree Actions
+  fetchTaskTree: (id: number) => Promise<TreeNode<Task>>;
+  getTaskChildren: (id: number) => Promise<Task[]>;
+  createSubTask: (parentId: number, data: CreateTaskDTO) => Promise<Task>;
+  moveTask: (id: number, parentId: number | null) => Promise<Task>;
+  fetchRootTasks: (projectId: number) => Promise<Task[]>;
+  
+  // Progress Actions
+  updateTaskProgress: (id: number, data: UpdateTaskProgressDTO) => Promise<Task>;
+  getTaskProgressRollup: (id: number) => Promise<TaskProgressRollup>;
   
   // Helpers
   getTaskById: (id: number) => Task | undefined;
@@ -363,6 +374,132 @@ export function TaskProvider({ children, projectId }: TaskProviderProps) {
     setError(null);
   }, []);
   
+  // Fetch task tree (task with all descendants)
+  const fetchTaskTree = useCallback(async (id: number): Promise<TreeNode<Task>> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const data = await api.getTaskTree(id);
+      return data;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch task tree';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // Get direct children of a task
+  const getTaskChildren = useCallback(async (id: number): Promise<Task[]> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const data = await api.getTaskChildren(id);
+      return data;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch task children';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // Create a subtask under a parent task
+  const createSubTask = useCallback(async (parentId: number, data: CreateTaskDTO): Promise<Task> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const newTask = await api.createSubTask(parentId, data);
+      setTasks(prev => [...prev, newTask]);
+      return newTask;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create subtask';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // Move a task to a new parent
+  const moveTask = useCallback(async (id: number, parentId: number | null): Promise<Task> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const updatedTask = await api.moveTask(id, parentId);
+      setTasks(prev => 
+        prev.map(t => t.id === id ? updatedTask : t)
+      );
+      return updatedTask;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to move task';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // Fetch root tasks for a project (tasks without parents)
+  const fetchRootTasks = useCallback(async (projectId: number): Promise<Task[]> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const data = await api.getRootTasks(projectId);
+      return data;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch root tasks';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // Update task progress
+  const updateTaskProgress = useCallback(async (id: number, data: UpdateTaskProgressDTO): Promise<Task> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const updatedTask = await api.updateTaskProgress(id, data);
+      setTasks(prev => 
+        prev.map(t => t.id === id ? updatedTask : t)
+      );
+      return updatedTask;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update task progress';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // Get task progress rollup (including children progress)
+  const getTaskProgressRollup = useCallback(async (id: number): Promise<TaskProgressRollup> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const data = await api.getTaskProgressRollup(id);
+      return data;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch task progress rollup';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
   // Get task by ID
   const getTaskById = useCallback((id: number): Task | undefined => {
     return tasks.find(t => t.id === id);
@@ -404,6 +541,13 @@ export function TaskProvider({ children, projectId }: TaskProviderProps) {
     removeCoAssignee,
     addTagToTask,
     removeTagFromTask,
+    fetchTaskTree,
+    getTaskChildren,
+    createSubTask,
+    moveTask,
+    fetchRootTasks,
+    updateTaskProgress,
+    getTaskProgressRollup,
     getTaskById,
     getTasksByStatus,
   };

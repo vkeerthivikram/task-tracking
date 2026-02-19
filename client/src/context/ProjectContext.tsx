@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
-import type { Project, CreateProjectDTO, UpdateProjectDTO } from '../types';
+import type { Project, CreateProjectDTO, UpdateProjectDTO, TreeNode, ProjectAssignee, ProjectAssigneeRole, CreateProjectAssigneeDTO } from '../types';
 import * as api from '../services/api';
 
 interface ProjectContextType {
   // State
   projects: Project[];
   currentProject: Project | null;
+  currentProjectAssignees: ProjectAssignee[];
   loading: boolean;
   error: string | null;
   
@@ -17,6 +18,19 @@ interface ProjectContextType {
   updateProject: (id: number, data: UpdateProjectDTO) => Promise<Project>;
   deleteProject: (id: number) => Promise<void>;
   clearError: () => void;
+  
+  // Tree methods
+  fetchRootProjects: () => Promise<Project[]>;
+  fetchProjectTree: (id: number) => Promise<TreeNode<Project>>;
+  getProjectChildren: (id: number) => Promise<Project[]>;
+  createSubProject: (parentId: number, data: CreateProjectDTO) => Promise<Project>;
+  moveProject: (id: number, parentId: number | null) => Promise<Project>;
+  
+  // Assignment methods
+  setProjectOwner: (projectId: number, personId: number | null) => Promise<Project>;
+  fetchProjectAssignees: (projectId: number) => Promise<ProjectAssignee[]>;
+  addProjectAssignee: (projectId: number, data: CreateProjectAssigneeDTO) => Promise<ProjectAssignee>;
+  removeProjectAssignee: (projectId: number, assigneeId: number) => Promise<void>;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -29,6 +43,7 @@ interface ProjectProviderProps {
 export function ProjectProvider({ children, currentProjectId }: ProjectProviderProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
+  const [currentProjectAssignees, setCurrentProjectAssignees] = useState<ProjectAssignee[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -149,6 +164,186 @@ export function ProjectProvider({ children, currentProjectId }: ProjectProviderP
     setError(null);
   }, []);
   
+  // Fetch root projects (top-level projects without parents)
+  const fetchRootProjects = useCallback(async (): Promise<Project[]> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const data = await api.getRootProjects();
+      return data;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch root projects';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // Fetch project tree (project with all descendants)
+  const fetchProjectTree = useCallback(async (id: number): Promise<TreeNode<Project>> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const data = await api.getProjectTree(id);
+      return data;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch project tree';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // Get direct children of a project
+  const getProjectChildren = useCallback(async (id: number): Promise<Project[]> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const data = await api.getProjectChildren(id);
+      return data;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch project children';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // Create a subproject under a parent project
+  const createSubProject = useCallback(async (parentId: number, data: CreateProjectDTO): Promise<Project> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const newProject = await api.createSubProject(parentId, data);
+      setProjects(prev => [...prev, newProject]);
+      return newProject;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create subproject';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // Move a project to a new parent
+  const moveProject = useCallback(async (id: number, parentId: number | null): Promise<Project> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const updatedProject = await api.moveProject(id, parentId);
+      setProjects(prev => 
+        prev.map(p => p.id === id ? updatedProject : p)
+      );
+      
+      // Update current project if it's the one being moved
+      if (currentProject?.id === id) {
+        setCurrentProject(updatedProject);
+      }
+      
+      return updatedProject;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to move project';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentProject]);
+  
+  // Set project owner
+  const setProjectOwner = useCallback(async (projectId: number, personId: number | null): Promise<Project> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const updatedProject = await api.setProjectOwner(projectId, personId);
+      setProjects(prev => 
+        prev.map(p => p.id === projectId ? updatedProject : p)
+      );
+      
+      // Update current project if it's the one being updated
+      if (currentProject?.id === projectId) {
+        setCurrentProject(updatedProject);
+      }
+      
+      return updatedProject;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to set project owner';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentProject]);
+  
+  // Fetch project assignees
+  const fetchProjectAssignees = useCallback(async (projectId: number): Promise<ProjectAssignee[]> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const assignees = await api.getProjectAssignees(projectId);
+      if (currentProject?.id === projectId) {
+        setCurrentProjectAssignees(assignees);
+      }
+      return assignees;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch project assignees';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentProject]);
+  
+  // Add project assignee
+  const addProjectAssignee = useCallback(async (projectId: number, data: CreateProjectAssigneeDTO): Promise<ProjectAssignee> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const newAssignee = await api.addProjectAssignee(projectId, data);
+      if (currentProject?.id === projectId) {
+        setCurrentProjectAssignees(prev => [...prev, newAssignee]);
+      }
+      return newAssignee;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to add project assignee';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentProject]);
+  
+  // Remove project assignee
+  const removeProjectAssignee = useCallback(async (projectId: number, assigneeId: number): Promise<void> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      await api.removeProjectAssignee(projectId, assigneeId);
+      if (currentProject?.id === projectId) {
+        setCurrentProjectAssignees(prev => prev.filter(a => a.id !== assigneeId));
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to remove project assignee';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentProject]);
+  
   // Fetch projects on mount
   useEffect(() => {
     fetchProjects();
@@ -164,6 +359,7 @@ export function ProjectProvider({ children, currentProjectId }: ProjectProviderP
   const value: ProjectContextType = {
     projects,
     currentProject,
+    currentProjectAssignees,
     loading,
     error,
     fetchProjects,
@@ -173,6 +369,15 @@ export function ProjectProvider({ children, currentProjectId }: ProjectProviderP
     updateProject,
     deleteProject,
     clearError,
+    fetchRootProjects,
+    fetchProjectTree,
+    getProjectChildren,
+    createSubProject,
+    moveProject,
+    setProjectOwner,
+    fetchProjectAssignees,
+    addProjectAssignee,
+    removeProjectAssignee,
   };
   
   return (

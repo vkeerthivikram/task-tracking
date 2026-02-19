@@ -7,10 +7,12 @@ const crypto = require('crypto');
 const VALID_STATUSES = ['backlog', 'todo', 'in_progress', 'review', 'done'];
 const VALID_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
 
+// ==================== BASIC CRUD ENDPOINTS ====================
+
 // GET /api/tasks - List all tasks with optional filters
 router.get('/', (req, res) => {
   try {
-    const { projectId, status, priority, search, assignee_id, tag_id } = req.query;
+    const { projectId, status, priority, search, assignee_id, tag_id, parent_task_id } = req.query;
     
     let query = 'SELECT DISTINCT t.* FROM tasks t WHERE 1=1';
     const params = [];
@@ -49,6 +51,16 @@ router.get('/', (req, res) => {
         SELECT 1 FROM task_tags tt WHERE tt.task_id = t.id AND tt.tag_id = ?
       )`;
       params.push(tag_id);
+    }
+    
+    // Filter by parent_task_id (can be 'null' for root tasks)
+    if (parent_task_id !== undefined) {
+      if (parent_task_id === 'null' || parent_task_id === null) {
+        query += ' AND t.parent_task_id IS NULL';
+      } else {
+        query += ' AND t.parent_task_id = ?';
+        params.push(parent_task_id);
+      }
     }
     
     query += ' ORDER BY t.created_at DESC';
@@ -128,7 +140,11 @@ router.get('/:id', (req, res) => {
 // POST /api/tasks - Create task
 router.post('/', (req, res) => {
   try {
-    const { project_id, title, description, status, priority, due_date, start_date, assignee_id } = req.body;
+    const { 
+      project_id, title, description, status, priority, 
+      due_date, start_date, assignee_id, parent_task_id,
+      progress_percent, estimated_duration_minutes, actual_duration_minutes
+    } = req.body;
     
     // Validation
     if (!title || title.trim() === '') {
@@ -201,9 +217,38 @@ router.post('/', (req, res) => {
       }
     }
     
+    // Validate parent_task_id if provided
+    if (parent_task_id) {
+      const parentTask = db.prepare('SELECT id FROM tasks WHERE id = ?').get(parent_task_id);
+      if (!parentTask) {
+        return res.status(400).json({ 
+          success: false, 
+          error: { 
+            code: 'VALIDATION_ERROR', 
+            message: 'Parent task not found' 
+          } 
+        });
+      }
+    }
+    
+    // Validate progress_percent
+    const taskProgress = progress_percent !== undefined ? progress_percent : 0;
+    if (taskProgress < 0 || taskProgress > 100) {
+      return res.status(400).json({ 
+        success: false, 
+        error: { 
+          code: 'VALIDATION_ERROR', 
+          message: 'Progress percent must be between 0 and 100' 
+        } 
+      });
+    }
+    
     const result = db.prepare(`
-      INSERT INTO tasks (project_id, title, description, status, priority, due_date, start_date, assignee_id) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO tasks (
+        project_id, title, description, status, priority, 
+        due_date, start_date, assignee_id, parent_task_id,
+        progress_percent, estimated_duration_minutes, actual_duration_minutes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       project_id, 
       title.trim(), 
@@ -212,7 +257,11 @@ router.post('/', (req, res) => {
       taskPriority, 
       due_date || null, 
       start_date || null,
-      assignee_id || null
+      assignee_id || null,
+      parent_task_id || null,
+      taskProgress,
+      estimated_duration_minutes || null,
+      actual_duration_minutes || null
     );
     
     const newTask = db.prepare('SELECT * FROM tasks WHERE id = ?').get(result.lastInsertRowid);
@@ -234,7 +283,11 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const { project_id, title, description, status, priority, due_date, start_date, assignee_id } = req.body;
+    const { 
+      project_id, title, description, status, priority, 
+      due_date, start_date, assignee_id, parent_task_id,
+      progress_percent, estimated_duration_minutes, actual_duration_minutes
+    } = req.body;
     
     // Check if task exists
     const existingTask = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
@@ -298,6 +351,42 @@ router.put('/:id', (req, res) => {
       }
     }
     
+    // Validate parent_task_id if provided (prevent self-reference)
+    if (parent_task_id !== undefined) {
+      if (parent_task_id !== null && parseInt(parent_task_id) === parseInt(id)) {
+        return res.status(400).json({ 
+          success: false, 
+          error: { 
+            code: 'VALIDATION_ERROR', 
+            message: 'Task cannot be its own parent' 
+          } 
+        });
+      }
+      if (parent_task_id !== null) {
+        const parentTask = db.prepare('SELECT id FROM tasks WHERE id = ?').get(parent_task_id);
+        if (!parentTask) {
+          return res.status(400).json({ 
+            success: false, 
+            error: { 
+              code: 'VALIDATION_ERROR', 
+              message: 'Parent task not found' 
+            } 
+          });
+        }
+      }
+    }
+    
+    // Validate progress_percent if provided
+    if (progress_percent !== undefined && (progress_percent < 0 || progress_percent > 100)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: { 
+          code: 'VALIDATION_ERROR', 
+          message: 'Progress percent must be between 0 and 100' 
+        } 
+      });
+    }
+    
     // Update task
     db.prepare(`
       UPDATE tasks 
@@ -309,6 +398,10 @@ router.put('/:id', (req, res) => {
           due_date = COALESCE(?, due_date), 
           start_date = COALESCE(?, start_date), 
           assignee_id = COALESCE(?, assignee_id),
+          parent_task_id = COALESCE(?, parent_task_id),
+          progress_percent = COALESCE(?, progress_percent),
+          estimated_duration_minutes = COALESCE(?, estimated_duration_minutes),
+          actual_duration_minutes = COALESCE(?, actual_duration_minutes),
           updated_at = CURRENT_TIMESTAMP 
       WHERE id = ?
     `).run(
@@ -320,6 +413,10 @@ router.put('/:id', (req, res) => {
       due_date !== undefined ? (due_date || null) : null,
       start_date !== undefined ? (start_date || null) : null,
       assignee_id !== undefined ? assignee_id : null,
+      parent_task_id !== undefined ? parent_task_id : null,
+      progress_percent !== undefined ? progress_percent : null,
+      estimated_duration_minutes !== undefined ? estimated_duration_minutes : null,
+      actual_duration_minutes !== undefined ? actual_duration_minutes : null,
       id
     );
     
@@ -420,6 +517,493 @@ router.delete('/:id', (req, res) => {
     });
   }
 });
+
+// ==================== HIERARCHY ENDPOINTS ====================
+
+// GET /api/tasks/:id/children - Get direct children of a task
+router.get('/:id/children', (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if task exists
+    const task = db.prepare('SELECT id FROM tasks WHERE id = ?').get(id);
+    if (!task) {
+      return res.status(404).json({ 
+        success: false, 
+        error: { 
+          code: 'NOT_FOUND', 
+          message: 'Task not found' 
+        } 
+      });
+    }
+    
+    const children = db.prepare(`
+      SELECT * FROM tasks 
+      WHERE parent_task_id = ? 
+      ORDER BY created_at DESC
+    `).all(id);
+    
+    res.json({ success: true, data: children });
+  } catch (error) {
+    console.error('Error fetching task children:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: { 
+        code: 'FETCH_ERROR', 
+        message: 'Failed to fetch task children' 
+      } 
+    });
+  }
+});
+
+// GET /api/tasks/:id/descendants - Get all descendants using recursive CTE
+router.get('/:id/descendants', (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if task exists
+    const task = db.prepare('SELECT id FROM tasks WHERE id = ?').get(id);
+    if (!task) {
+      return res.status(404).json({ 
+        success: false, 
+        error: { 
+          code: 'NOT_FOUND', 
+          message: 'Task not found' 
+        } 
+      });
+    }
+    
+    const descendants = db.prepare(`
+      WITH RECURSIVE descendants AS (
+        SELECT * FROM tasks WHERE parent_task_id = ?
+        UNION ALL
+        SELECT t.* FROM tasks t
+        INNER JOIN descendants d ON t.parent_task_id = d.id
+      )
+      SELECT * FROM descendants ORDER BY created_at DESC
+    `).all(id);
+    
+    res.json({ success: true, data: descendants });
+  } catch (error) {
+    console.error('Error fetching task descendants:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: { 
+        code: 'FETCH_ERROR', 
+        message: 'Failed to fetch task descendants' 
+      } 
+    });
+  }
+});
+
+// GET /api/tasks/:id/ancestors - Get all ancestors using recursive CTE
+router.get('/:id/ancestors', (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if task exists
+    const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+    if (!task) {
+      return res.status(404).json({ 
+        success: false, 
+        error: { 
+          code: 'NOT_FOUND', 
+          message: 'Task not found' 
+        } 
+      });
+    }
+    
+    const ancestors = db.prepare(`
+      WITH RECURSIVE ancestors AS (
+        SELECT * FROM tasks WHERE id = (SELECT parent_task_id FROM tasks WHERE id = ?)
+        UNION ALL
+        SELECT t.* FROM tasks t
+        INNER JOIN ancestors a ON t.id = (SELECT parent_task_id FROM tasks WHERE id = a.id)
+      )
+      SELECT * FROM ancestors WHERE id IS NOT NULL ORDER BY created_at ASC
+    `).all(id);
+    
+    res.json({ success: true, data: ancestors });
+  } catch (error) {
+    console.error('Error fetching task ancestors:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: { 
+        code: 'FETCH_ERROR', 
+        message: 'Failed to fetch task ancestors' 
+      } 
+    });
+  }
+});
+
+// GET /api/tasks/:id/tree - Get full tree as nested JSON
+router.get('/:id/tree', (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if task exists
+    const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+    if (!task) {
+      return res.status(404).json({ 
+        success: false, 
+        error: { 
+          code: 'NOT_FOUND', 
+          message: 'Task not found' 
+        } 
+      });
+    }
+    
+    // Recursive function to build tree
+    function buildTree(parentId) {
+      const children = db.prepare(`
+        SELECT * FROM tasks WHERE parent_task_id = ? ORDER BY created_at DESC
+      `).all(parentId);
+      
+      return children.map(child => ({
+        ...child,
+        children: buildTree(child.id)
+      }));
+    }
+    
+    const tree = {
+      ...task,
+      children: buildTree(id)
+    };
+    
+    res.json({ success: true, data: tree });
+  } catch (error) {
+    console.error('Error fetching task tree:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: { 
+        code: 'FETCH_ERROR', 
+        message: 'Failed to fetch task tree' 
+      } 
+    });
+  }
+});
+
+// POST /api/tasks/:parentId/subtasks - Create a sub-task
+router.post('/:parentId/subtasks', (req, res) => {
+  try {
+    const { parentId } = req.params;
+    const { 
+      title, description, status, priority, 
+      due_date, start_date, assignee_id,
+      progress_percent, estimated_duration_minutes
+    } = req.body;
+    
+    // Check if parent task exists
+    const parentTask = db.prepare('SELECT * FROM tasks WHERE id = ?').get(parentId);
+    if (!parentTask) {
+      return res.status(404).json({ 
+        success: false, 
+        error: { 
+          code: 'NOT_FOUND', 
+          message: 'Parent task not found' 
+        } 
+      });
+    }
+    
+    if (!title || title.trim() === '') {
+      return res.status(400).json({ 
+        success: false, 
+        error: { 
+          code: 'VALIDATION_ERROR', 
+          message: 'Task title is required' 
+        } 
+      });
+    }
+    
+    // Validate status
+    const taskStatus = status || 'todo';
+    if (!VALID_STATUSES.includes(taskStatus)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: { 
+          code: 'VALIDATION_ERROR', 
+          message: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` 
+        } 
+      });
+    }
+    
+    // Validate priority
+    const taskPriority = priority || 'medium';
+    if (!VALID_PRIORITIES.includes(taskPriority)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: { 
+          code: 'VALIDATION_ERROR', 
+          message: `Invalid priority. Must be one of: ${VALID_PRIORITIES.join(', ')}` 
+        } 
+      });
+    }
+    
+    const result = db.prepare(`
+      INSERT INTO tasks (
+        project_id, title, description, status, priority, 
+        due_date, start_date, assignee_id, parent_task_id,
+        progress_percent, estimated_duration_minutes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      parentTask.project_id, 
+      title.trim(), 
+      description?.trim() || null, 
+      taskStatus, 
+      taskPriority, 
+      due_date || null, 
+      start_date || null,
+      assignee_id || null,
+      parentId,
+      progress_percent || 0,
+      estimated_duration_minutes || null
+    );
+    
+    const newTask = db.prepare('SELECT * FROM tasks WHERE id = ?').get(result.lastInsertRowid);
+    
+    res.status(201).json({ success: true, data: newTask });
+  } catch (error) {
+    console.error('Error creating sub-task:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: { 
+        code: 'CREATE_ERROR', 
+        message: 'Failed to create sub-task' 
+      } 
+    });
+  }
+});
+
+// PUT /api/tasks/:id/move - Move task to a new parent
+router.put('/:id/move', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { parent_id } = req.body;
+    
+    // Check if task exists
+    const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+    if (!task) {
+      return res.status(404).json({ 
+        success: false, 
+        error: { 
+          code: 'NOT_FOUND', 
+          message: 'Task not found' 
+        } 
+      });
+    }
+    
+    // Validate parent_id if provided
+    if (parent_id !== null && parent_id !== undefined) {
+      // Prevent self-reference
+      if (parseInt(parent_id) === parseInt(id)) {
+        return res.status(400).json({ 
+          success: false, 
+          error: { 
+            code: 'VALIDATION_ERROR', 
+            message: 'Task cannot be moved to itself' 
+          } 
+        });
+      }
+      
+      // Check if parent exists
+      const parentTask = db.prepare('SELECT id FROM tasks WHERE id = ?').get(parent_id);
+      if (!parentTask) {
+        return res.status(404).json({ 
+          success: false, 
+          error: { 
+            code: 'NOT_FOUND', 
+            message: 'Parent task not found' 
+          } 
+        });
+      }
+      
+      // Check for circular reference (if parent is a descendant)
+      const descendants = db.prepare(`
+        WITH RECURSIVE descendants AS (
+          SELECT id FROM tasks WHERE parent_task_id = ?
+          UNION ALL
+          SELECT t.id FROM tasks t
+          INNER JOIN descendants d ON t.parent_task_id = d.id
+        )
+        SELECT id FROM descendants
+      `).all(id);
+      
+      const descendantIds = descendants.map(d => d.id);
+      if (descendantIds.includes(parseInt(parent_id))) {
+        return res.status(400).json({ 
+          success: false, 
+          error: { 
+            code: 'VALIDATION_ERROR', 
+            message: 'Cannot move task to one of its descendants' 
+          } 
+        });
+      }
+    }
+    
+    // Update the parent
+    db.prepare(`
+      UPDATE tasks 
+      SET parent_task_id = ?, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = ?
+    `).run(parent_id || null, id);
+    
+    const updatedTask = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+    
+    res.json({ success: true, data: updatedTask });
+  } catch (error) {
+    console.error('Error moving task:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: { 
+        code: 'UPDATE_ERROR', 
+        message: 'Failed to move task' 
+      } 
+    });
+  }
+});
+
+// ==================== PROGRESS ENDPOINTS ====================
+
+// PUT /api/tasks/:id/progress - Update task progress
+router.put('/:id/progress', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { progress_percent, estimated_duration_minutes, actual_duration_minutes } = req.body;
+    
+    // Check if task exists
+    const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+    if (!task) {
+      return res.status(404).json({ 
+        success: false, 
+        error: { 
+          code: 'NOT_FOUND', 
+          message: 'Task not found' 
+        } 
+      });
+    }
+    
+    // Validate progress_percent if provided
+    if (progress_percent !== undefined && (progress_percent < 0 || progress_percent > 100)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: { 
+          code: 'VALIDATION_ERROR', 
+          message: 'Progress percent must be between 0 and 100' 
+        } 
+      });
+    }
+    
+    // Update progress fields
+    db.prepare(`
+      UPDATE tasks 
+      SET progress_percent = COALESCE(?, progress_percent),
+          estimated_duration_minutes = COALESCE(?, estimated_duration_minutes),
+          actual_duration_minutes = COALESCE(?, actual_duration_minutes),
+          updated_at = CURRENT_TIMESTAMP 
+      WHERE id = ?
+    `).run(
+      progress_percent !== undefined ? progress_percent : null,
+      estimated_duration_minutes !== undefined ? estimated_duration_minutes : null,
+      actual_duration_minutes !== undefined ? actual_duration_minutes : null,
+      id
+    );
+    
+    const updatedTask = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+    
+    res.json({ success: true, data: updatedTask });
+  } catch (error) {
+    console.error('Error updating task progress:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: { 
+        code: 'UPDATE_ERROR', 
+        message: 'Failed to update task progress' 
+      } 
+    });
+  }
+});
+
+// GET /api/tasks/:id/progress/rollup - Get calculated progress including children
+router.get('/:id/progress/rollup', (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if task exists
+    const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+    if (!task) {
+      return res.status(404).json({ 
+        success: false, 
+        error: { 
+          code: 'NOT_FOUND', 
+          message: 'Task not found' 
+        } 
+      });
+    }
+    
+    // Get all descendants
+    const descendants = db.prepare(`
+      WITH RECURSIVE descendants AS (
+        SELECT * FROM tasks WHERE parent_task_id = ?
+        UNION ALL
+        SELECT t.* FROM tasks t
+        INNER JOIN descendants d ON t.parent_task_id = d.id
+      )
+      SELECT * FROM descendants
+    `).all(id);
+    
+    // Get only direct children for rollup calculation
+    const directChildren = descendants.filter(d => d.parent_task_id === parseInt(id));
+    
+    if (directChildren.length === 0) {
+      // No children, return own progress
+      res.json({ 
+        success: true, 
+        data: {
+          task_id: id,
+          progress_percent: task.progress_percent || 0,
+          children_count: 0,
+          rollup_type: 'self'
+        }
+      });
+    } else {
+      // Calculate average progress from direct children
+      const avgProgress = directChildren.reduce((sum, child) => sum + (child.progress_percent || 0), 0) / directChildren.length;
+      
+      // Count all descendants
+      const allDescendants = descendants.length;
+      
+      res.json({ 
+        success: true, 
+        data: {
+          task_id: id,
+          progress_percent: Math.round(avgProgress),
+          children_count: directChildren.length,
+          all_descendants_count: allDescendants,
+          rollup_type: 'children_average',
+          children: directChildren.map(c => ({
+            id: c.id,
+            title: c.title,
+            progress_percent: c.progress_percent || 0
+          }))
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error calculating progress rollup:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: { 
+        code: 'FETCH_ERROR', 
+        message: 'Failed to calculate progress rollup' 
+      } 
+    });
+  }
+});
+
+// ==================== PROJECT ROOT TASKS ENDPOINT ====================
+
+// GET /api/projects/:id/tasks/root - Get root tasks for a project (mounted at /api/tasks/projects/:id/tasks/root)
+// Note: This is registered separately in index.js
 
 // ==================== ASSIGNEE ENDPOINTS ====================
 

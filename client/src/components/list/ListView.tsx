@@ -18,6 +18,8 @@ const DEFAULT_FILTERS: ListFilters = {
   search: '',
   status: [],
   priority: [],
+  assignee_id: '',
+  tag_id: '',
 };
 
 const DEFAULT_SORT: { sortBy: SortKey; sortOrder: SortOrder } = {
@@ -263,6 +265,12 @@ export function ListView() {
                       onSort={handleSort}
                       className="w-28"
                     />
+                    <th
+                      className="sticky top-0 z-10 px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700"
+                      scope="col"
+                    >
+                      Progress
+                    </th>
                     <th
                       className="sticky top-0 z-10 px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700"
                       scope="col"

@@ -1,18 +1,21 @@
 import React, { useState, useEffect, useMemo, type FormEvent } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { ClipboardList, Calendar, Flag, Loader2, User, Tag, X, Plus } from 'lucide-react';
+import { ClipboardList, Calendar, Flag, Loader2, User, Tag, X, Plus, Clock, GitBranch, Users } from 'lucide-react';
 import type { Task, Project, CreateTaskDTO, UpdateTaskDTO, TaskStatus, TaskPriority, Person, Tag as TagType } from '../../types';
 import { STATUS_CONFIG, PRIORITY_CONFIG } from '../../types';
 import { Button } from './Button';
-import { StatusBadge, PriorityBadge, TagBadge } from './Badge';
+import { TagBadge } from './Badge';
+import { MiniProgressBar } from './ProgressBar';
 import { usePeople } from '../../context/PeopleContext';
 import { useTags } from '../../context/TagContext';
+import { useTasks } from '../../context/TaskContext';
 
 interface TaskFormProps {
   task?: Task | null;
   project?: Project | null;
   projectId?: number;
+  parentTaskId?: number;
   onSubmit: (data: CreateTaskDTO | UpdateTaskDTO) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
@@ -25,7 +28,11 @@ interface FormData {
   priority: TaskPriority;
   due_date: string;
   start_date: string;
-  assignee_id: string;
+  assignee_id: number | null;
+  parent_task_id: number | null;
+  progress_percent: number;
+  estimated_duration_minutes: number;
+  actual_duration_minutes: number;
 }
 
 interface FormErrors {
@@ -39,6 +46,7 @@ export function TaskForm({
   task,
   project,
   projectId: propProjectId,
+  parentTaskId: propParentTaskId,
   onSubmit,
   onCancel,
   isLoading = false,
@@ -48,6 +56,18 @@ export function TaskForm({
   
   const { projectPeople, people } = usePeople();
   const { availableTags } = useTags();
+  const { tasks } = useTasks();
+  
+  // Get available parent tasks (tasks from same project, excluding self and descendants)
+  const availableParentTasks = useMemo(() => {
+    if (!currentProjectId) return [];
+    
+    // Get all tasks in the same project
+    return tasks.filter(t => 
+      t.project_id === currentProjectId && 
+      t.id !== task?.id // Can't be parent of itself
+    );
+  }, [tasks, currentProjectId, task?.id]);
   
   // Get available people for assignment
   const availablePeople = useMemo(() => {
@@ -58,13 +78,10 @@ export function TaskForm({
     return people;
   }, [people, currentProjectId]);
   
-  // Get available tags for this project
+  // Get tags for this project
   const tagsForProject = useMemo(() => {
-    if (currentProjectId) {
-      return availableTags(currentProjectId);
-    }
-    return [];
-  }, [availableTags, currentProjectId]);
+    return availableTags;
+  }, [availableTags]);
   
   const [formData, setFormData] = useState<FormData>({
     title: task?.title || '',
@@ -73,7 +90,11 @@ export function TaskForm({
     priority: task?.priority || 'medium',
     due_date: task?.due_date ? task.due_date.split('T')[0] : '',
     start_date: task?.start_date ? task.start_date.split('T')[0] : '',
-    assignee_id: task?.assignee_id || '',
+    assignee_id: task?.assignee_id || null,
+    parent_task_id: task?.parent_task_id || propParentTaskId || null,
+    progress_percent: task?.progress_percent || 0,
+    estimated_duration_minutes: task?.estimated_duration_minutes || 0,
+    actual_duration_minutes: task?.actual_duration_minutes || 0,
   });
   
   // Selected co-assignees and tags (for editing existing task)
@@ -96,7 +117,11 @@ export function TaskForm({
         priority: task.priority,
         due_date: task.due_date ? task.due_date.split('T')[0] : '',
         start_date: task.start_date ? task.start_date.split('T')[0] : '',
-        assignee_id: task.assignee_id || '',
+        assignee_id: task.assignee_id || null,
+        parent_task_id: task.parent_task_id || propParentTaskId || null,
+        progress_percent: task.progress_percent || 0,
+        estimated_duration_minutes: task.estimated_duration_minutes || 0,
+        actual_duration_minutes: task.actual_duration_minutes || 0,
       });
       
       // Set co-assignees from task
@@ -115,7 +140,7 @@ export function TaskForm({
         setSelectedTags(taskTags);
       }
     }
-  }, [task]);
+  }, [task, propParentTaskId]);
   
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -151,26 +176,26 @@ export function TaskForm({
     if (!validateForm()) return;
     
     try {
-      const data = {
+      const data: CreateTaskDTO | UpdateTaskDTO = {
         title: formData.title.trim(),
         description: formData.description.trim(),
         status: formData.status,
         priority: formData.priority,
         due_date: formData.due_date || null,
         start_date: formData.start_date || null,
-        assignee_id: formData.assignee_id || null,
-        // Include tag IDs for new tasks
-        tag_ids: selectedTags.map(t => t.id),
-        // Include co-assignee IDs for new tasks
-        co_assignee_ids: selectedCoAssignees.map(p => p.id),
-        ...(isEditing ? {} : { project_id: currentProjectId }),
+        assignee_id: formData.assignee_id || undefined,
+        parent_task_id: formData.parent_task_id || null,
+        progress_percent: formData.progress_percent,
+        estimated_duration_minutes: formData.estimated_duration_minutes || undefined,
+        actual_duration_minutes: formData.actual_duration_minutes || undefined,
+        ...(isEditing ? {} : { 
+          project_id: currentProjectId,
+          tag_ids: selectedTags.map(t => t.id),
+          co_assignee_ids: selectedCoAssignees.map(p => p.id),
+        }),
       };
       
-      if (isEditing) {
-        await onSubmit(data as UpdateTaskDTO);
-      } else {
-        await onSubmit(data as CreateTaskDTO);
-      }
+      await onSubmit(data);
     } catch {
       // Error handling is done by the parent component
     }
@@ -179,8 +204,26 @@ export function TaskForm({
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    
+    if (name === 'assignee_id') {
+      setFormData(prev => ({ 
+        ...prev, 
+        [name]: value ? Number(value) : null 
+      }));
+    } else if (name === 'parent_task_id') {
+      setFormData(prev => ({ 
+        ...prev, 
+        [name]: value ? Number(value) : null 
+      }));
+    } else if (type === 'number') {
+      setFormData(prev => ({ 
+        ...prev, 
+        [name]: Number(value) 
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
     
     // Clear error when user starts typing
     if (errors[name as keyof FormErrors]) {
@@ -189,7 +232,7 @@ export function TaskForm({
   };
   
   // Add co-assignee
-  const handleAddCoAssignee = (personId: string) => {
+  const handleAddCoAssignee = (personId: number) => {
     const person = availablePeople.find(p => p.id === personId);
     if (person && !selectedCoAssignees.find(p => p.id === personId)) {
       // Don't add if already primary assignee
@@ -201,12 +244,12 @@ export function TaskForm({
   };
   
   // Remove co-assignee
-  const handleRemoveCoAssignee = (personId: string) => {
+  const handleRemoveCoAssignee = (personId: number) => {
     setSelectedCoAssignees(prev => prev.filter(p => p.id !== personId));
   };
   
   // Add tag
-  const handleAddTag = (tagId: string) => {
+  const handleAddTag = (tagId: number) => {
     const tag = tagsForProject.find(t => t.id === tagId);
     if (tag && !selectedTags.find(t => t.id === tagId)) {
       setSelectedTags(prev => [...prev, tag]);
@@ -215,7 +258,7 @@ export function TaskForm({
   };
   
   // Remove tag
-  const handleRemoveTag = (tagId: string) => {
+  const handleRemoveTag = (tagId: number) => {
     setSelectedTags(prev => prev.filter(t => t.id !== tagId));
   };
   
@@ -233,7 +276,17 @@ export function TaskForm({
       !selectedTags.find(s => s.id === t.id)
     );
   }, [tagsForProject, selectedTags]);
-  
+
+  // Helper to format duration
+  const formatDuration = (minutes: number): string => {
+    if (minutes === 0) return '0m';
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours === 0) return `${mins}m`;
+    if (mins === 0) return `${hours}h`;
+    return `${hours}h ${mins}m`;
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Project Info (if available) */}
@@ -319,6 +372,42 @@ export function TaskForm({
         </p>
       </div>
       
+      {/* Parent Task (for nested tasks) */}
+      {availableParentTasks.length > 0 && (
+        <div>
+          <label
+            htmlFor="parent_task_id"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+          >
+            <GitBranch className="w-4 h-4 inline-block mr-1" />
+            Parent Task
+          </label>
+          <select
+            id="parent_task_id"
+            name="parent_task_id"
+            value={formData.parent_task_id || ''}
+            onChange={handleInputChange}
+            className={twMerge(
+              clsx(
+                'w-full px-3 py-2 rounded-md border shadow-sm',
+                'bg-white dark:bg-gray-900',
+                'text-gray-900 dark:text-gray-100',
+                'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                'border-gray-300 dark:border-gray-600'
+              )
+            )}
+            disabled={isLoading}
+          >
+            <option value="">No parent task (top-level)</option>
+            {availableParentTasks.map(t => (
+              <option key={t.id} value={t.id}>
+                {t.title}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      
       {/* Status and Priority Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Status */}
@@ -352,9 +441,6 @@ export function TaskForm({
               </option>
             ))}
           </select>
-          <div className="mt-2">
-            <StatusBadge status={formData.status} size="sm" />
-          </div>
         </div>
         
         {/* Priority */}
@@ -388,8 +474,113 @@ export function TaskForm({
               </option>
             ))}
           </select>
+        </div>
+      </div>
+      
+      {/* Progress Section */}
+      <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <Clock className="w-4 h-4 inline-block mr-1" />
+            Progress & Duration
+          </label>
+          {formData.progress_percent > 0 && (
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              {formData.progress_percent}%
+            </span>
+          )}
+        </div>
+        
+        {/* Progress Bar */}
+        <div>
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              id="progress_percent"
+              name="progress_percent"
+              min="0"
+              max="100"
+              value={formData.progress_percent}
+              onChange={handleInputChange}
+              className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+              disabled={isLoading}
+            />
+            <span className="text-sm text-gray-600 dark:text-gray-400 w-12 text-right">
+              {formData.progress_percent}%
+            </span>
+          </div>
           <div className="mt-2">
-            <PriorityBadge priority={formData.priority} size="sm" />
+            <MiniProgressBar percent={formData.progress_percent} />
+          </div>
+        </div>
+        
+        {/* Duration Fields */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label
+              htmlFor="estimated_duration_minutes"
+              className="block text-xs text-gray-500 dark:text-gray-400 mb-1"
+            >
+              Estimated (minutes)
+            </label>
+            <input
+              type="number"
+              id="estimated_duration_minutes"
+              name="estimated_duration_minutes"
+              min="0"
+              step="15"
+              value={formData.estimated_duration_minutes}
+              onChange={handleInputChange}
+              placeholder="0"
+              className={twMerge(
+                clsx(
+                  'w-full px-3 py-1.5 rounded-md border shadow-sm text-sm',
+                  'bg-white dark:bg-gray-900',
+                  'text-gray-900 dark:text-gray-100',
+                  'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                  'border-gray-300 dark:border-gray-600'
+                )
+              )}
+              disabled={isLoading}
+            />
+            {formData.estimated_duration_minutes > 0 && (
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                = {formatDuration(formData.estimated_duration_minutes)}
+              </p>
+            )}
+          </div>
+          <div>
+            <label
+              htmlFor="actual_duration_minutes"
+              className="block text-xs text-gray-500 dark:text-gray-400 mb-1"
+            >
+              Actual (minutes)
+            </label>
+            <input
+              type="number"
+              id="actual_duration_minutes"
+              name="actual_duration_minutes"
+              min="0"
+              step="15"
+              value={formData.actual_duration_minutes}
+              onChange={handleInputChange}
+              placeholder="0"
+              className={twMerge(
+                clsx(
+                  'w-full px-3 py-1.5 rounded-md border shadow-sm text-sm',
+                  'bg-white dark:bg-gray-900',
+                  'text-gray-900 dark:text-gray-100',
+                  'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+                  'border-gray-300 dark:border-gray-600'
+                )
+              )}
+              disabled={isLoading}
+            />
+            {formData.actual_duration_minutes > 0 && (
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                = {formatDuration(formData.actual_duration_minutes)}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -406,7 +597,7 @@ export function TaskForm({
         <select
           id="assignee_id"
           name="assignee_id"
-          value={formData.assignee_id}
+          value={formData.assignee_id || ''}
           onChange={handleInputChange}
           className={twMerge(
             clsx(
@@ -705,27 +896,6 @@ export function TaskForm({
         </Button>
       </div>
     </form>
-  );
-}
-
-// Users icon component for co-assignees label
-function Users({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
   );
 }
 

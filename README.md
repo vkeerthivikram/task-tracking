@@ -1,7 +1,7 @@
 # 📋 TaskFlow - Project Management Application
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com)
-[![Version](https://img.shields.io/badge/version-1.1.0-blue)](https://github.com)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue)](https://github.com)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org)
 
@@ -33,11 +33,37 @@ A **local-first, single-user** project management web application inspired by Ji
 - **Local-First** - All data stored locally in SQLite, works offline
 - **Responsive Design** - Works seamlessly on desktop and mobile devices
 
+### 🌲 v1.2.0: Nested Hierarchy
+- **Nested Projects** - Create infinitely nested sub-projects to organize complex work
+- **Nested Tasks** - Break down tasks into sub-tasks to any depth
+- **Project Tree View** - Visualize project hierarchy with expandable tree
+- **Task Tree View** - Navigate task hierarchies with parent/child relationships
+- **Move Operations** - Move projects and tasks between parents
+
+### 📊 v1.2.0: Progress Tracking
+- **Progress Percentage** - Track completion from 0-100% on any task
+- **Time Estimates** - Set estimated duration in minutes for tasks
+- **Actual Time Tracking** - Record actual time spent on tasks
+- **Progress Rollup** - Parent tasks show aggregated progress from children
+- **Visual Progress Bars** - See progress at a glance on task cards
+
+### 📝 v1.2.0: Notes System
+- **Markdown Notes** - Add rich-text notes with full markdown support
+- **Entity Attachment** - Attach notes to projects, tasks, or people
+- **Note History** - Track creation and update timestamps
+- **Preview Mode** - Toggle between edit and preview modes
+
 ### 👥 People & Assignments
 - **People Management** - Create and manage contacts (not users) with name, email, company, and designation
 - **Project Association** - Associate people with specific projects
 - **Task Assignments** - Assign a primary assignee and multiple co-assignees (collaborators) to tasks
 - **Assignment Roles** - Track collaborator roles on tasks
+
+### 🏢 v1.3.0: Project Assignments
+- **Project Owner** - Set a primary owner for each project from the people list
+- **Project Assignees** - Add multiple team members to projects with roles (lead, member, observer)
+- **Owner Display** - Visual indicators show project owner in sidebar and project tree
+- **Team Management** - View and manage project team membership
 
 ### 🏷️ Tags & Categorization
 - **Custom Tags** - Create tags with custom names and colors
@@ -51,7 +77,7 @@ A **local-first, single-user** project management web application inspired by Ji
    - Backlog → To Do → In Progress → Review → Done
    - Drag tasks between columns to update status
    - Color-coded priority badges
-   - Shows assignees and tags on task cards
+   - Shows assignees, tags, and progress on task cards
 
 2. **📝 List View** - Traditional tabular view with advanced filtering
    - Sortable columns (title, status, priority, due date)
@@ -85,9 +111,16 @@ A **local-first, single-user** project management web application inspired by Ji
 - **Priority**: Low, Medium, High, Urgent
 - **Dates**: Start date and due date
 - **Project**: Belongs to a project
+- **Parent Task**: Can be a sub-task of another task (v1.2.0)
 - **Assignee**: Primary assignee (person responsible)
 - **Co-Assignees**: Multiple collaborators with roles
 - **Tags**: Multiple tags for categorization
+- **Progress**: Completion percentage (v1.2.0)
+- **Time Estimates**: Estimated and actual duration (v1.2.0)
+
+### 🌲 Project Properties (v1.2.0)
+- **Parent Project**: Can be a sub-project of another project
+- **Nested Structure**: Organize projects in hierarchical trees
 
 ---
 
@@ -164,7 +197,7 @@ make install
 **Option C: Using PowerShell (Windows)**
 ```powershell
 # First, load the scripts (dot-source)
-. .\scripts.ps1
+.\scripts.ps1
 
 # Then install all dependencies
 Install-All
@@ -197,7 +230,7 @@ make dev
 **Option C: Using PowerShell (Windows)**
 ```powershell
 # First, load the scripts (dot-source)
-. .\scripts.ps1
+.\scripts.ps1
 
 # Start both servers
 Start-Dev
@@ -322,7 +355,14 @@ Reinstall-All
 1. Click the **"+ New Project"** button in the sidebar or header
 2. Enter a project name and optional description
 3. Choose a color for visual identification
-4. Click **"Create Project"**
+4. Optionally select a parent project to create a sub-project (v1.2.0)
+5. Click **"Create Project"**
+
+### Creating Nested Sub-Projects (v1.2.0)
+1. Navigate to an existing project
+2. Click **"Add Sub-Project"** in the project menu
+3. The new project will be nested under the parent
+4. Use the tree view to visualize hierarchy
 
 ### Creating a Task
 1. Select a project from the dropdown
@@ -336,7 +376,34 @@ Reinstall-All
    - **Due Date** (optional)
    - **Assignee** (primary person responsible)
    - **Tags** (select multiple tags)
+   - **Progress** (0-100%, v1.2.0)
+   - **Estimated Duration** (v1.2.0)
 4. Click **"Create Task"**
+
+### Creating Sub-Tasks (v1.2.0)
+1. Open an existing task
+2. Click **"Add Sub-Task"** in the task menu
+3. The sub-task inherits the parent's project
+4. View hierarchy in the task tree
+
+### Tracking Progress (v1.2.0)
+1. Open a task for editing
+2. Use the **Progress slider** to set completion percentage (0-100%)
+3. Enter **Estimated Duration** in hours/minutes (e.g., "2h 30m")
+4. Enter **Actual Duration** when work is complete
+5. For parent tasks, view **rollup progress** from all children
+
+### Adding Notes (v1.2.0)
+1. Open any project, task, or person
+2. Navigate to the **Notes** panel
+3. Click **"Add Note"**
+4. Write your note using markdown syntax:
+   - Headers: `#`, `##`, `###`
+   - Bold: `**text**`
+   - Italic: `*text*`
+   - Lists: `- item` or `1. item`
+   - Code: `` `code` `` or ` ```block``` `
+5. Click **"Save Note"**
 
 ### Managing People
 1. Navigate to the **People** view from the sidebar
@@ -356,6 +423,21 @@ Reinstall-All
    - Click **"Add Collaborator"**
    - Select a person and optionally specify their role
 4. Click **"Save Changes"**
+
+### Assigning Owner to Projects (v1.3.0)
+1. Open the project form (click **"Edit"** on a project or create a new one)
+2. In the **Owner** dropdown, select a person from your contacts
+3. The owner's avatar will appear next to the project name in the sidebar
+4. Click **"Save"** to assign the owner
+
+### Managing Project Team Members (v1.3.0)
+1. Navigate to a project
+2. View the project team in the sidebar or project details
+3. Add team members with specific roles:
+   - **Lead**: Project lead with primary responsibility
+   - **Member**: Regular team member
+   - **Observer**: Read-only access to project progress
+4. Each project can have multiple assignees with different roles
 
 ### Creating and Using Tags
 1. Tags can be created when editing a task:
@@ -422,6 +504,32 @@ curl -X POST http://localhost:3001/api/projects \
   -d '{"name": "My Project", "description": "Project description", "color": "#3B82F6"}'
 ```
 
+### Project Hierarchy API (v1.2.0)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/projects/root` | Get all root projects (no parent) |
+| `GET` | `/projects/:id/children` | Get direct child projects |
+| `GET` | `/projects/:id/descendants` | Get all descendants recursively |
+| `GET` | `/projects/:id/ancestors` | Get path to root (all ancestors) |
+| `GET` | `/projects/:id/tree` | Get project with nested children |
+| `POST` | `/projects/:parentId/subprojects` | Create a sub-project |
+| `PUT` | `/projects/:id/move` | Move to new parent (or root) |
+
+#### Example: Create Sub-Project
+```bash
+curl -X POST http://localhost:3001/api/projects/parent-id/subprojects \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Sub-Project", "description": "Nested project"}'
+```
+
+#### Example: Move Project
+```bash
+curl -X PUT http://localhost:3001/api/projects/project-id/move \
+  -H "Content-Type: application/json" \
+  -d '{"parent_project_id": "new-parent-id"}'
+```
+
 ### Tasks API
 
 | Method | Endpoint | Description |
@@ -454,7 +562,9 @@ curl -X POST http://localhost:3001/api/tasks \
     "priority": "high",
     "dueDate": "2024-02-28",
     "assigneeId": "person-uuid",
-    "tagIds": ["tag-uuid-1", "tag-uuid-2"]
+    "tagIds": ["tag-uuid-1", "tag-uuid-2"],
+    "progress_percent": 25,
+    "estimated_duration_minutes": 120
   }'
 ```
 
@@ -463,6 +573,87 @@ curl -X POST http://localhost:3001/api/tasks \
 curl -X PATCH http://localhost:3001/api/tasks/task-uuid/status \
   -H "Content-Type: application/json" \
   -d '{"status": "in_progress"}'
+```
+
+### Task Hierarchy API (v1.2.0)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/tasks/:id/children` | Get direct child tasks |
+| `GET` | `/tasks/:id/descendants` | Get all descendants recursively |
+| `GET` | `/tasks/:id/ancestors` | Get path to root task |
+| `GET` | `/tasks/:id/tree` | Get task with nested children |
+| `POST` | `/tasks/:parentId/subtasks` | Create a sub-task |
+| `PUT` | `/tasks/:id/move` | Move to new parent (or root) |
+| `GET` | `/projects/:id/tasks/root` | Get root tasks for project |
+
+#### Example: Create Sub-Task
+```bash
+curl -X POST http://localhost:3001/api/tasks/parent-id/subtasks \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Sub-Task", "priority": "medium"}'
+```
+
+### Task Progress API (v1.2.0)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `PUT` | `/tasks/:id/progress` | Update progress and duration |
+| `GET` | `/tasks/:id/progress/rollup` | Get calculated progress including children |
+
+#### Example: Update Progress
+```bash
+curl -X PUT http://localhost:3001/api/tasks/task-uuid/progress \
+  -H "Content-Type: application/json" \
+  -d '{
+    "progress_percent": 75,
+    "actual_duration_minutes": 90
+  }'
+```
+
+#### Example: Get Progress Rollup
+```bash
+curl http://localhost:3001/api/tasks/task-uuid/progress/rollup
+```
+
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "task_id": "task-uuid",
+    "direct_progress": 50,
+    "rollup_progress": 67,
+    "child_count": 4,
+    "completed_children": 2
+  }
+}
+```
+
+### Notes API (v1.2.0)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/notes` | List notes (query: `entity_type`, `entity_id`) |
+| `GET` | `/notes/:id` | Get single note |
+| `POST` | `/notes` | Create note |
+| `PUT` | `/notes/:id` | Update note |
+| `DELETE` | `/notes/:id` | Delete note |
+
+#### Example: Create Note
+```bash
+curl -X POST http://localhost:3001/api/notes \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "# Important Note\n\nThis task requires **urgent** attention.",
+    "entity_type": "task",
+    "entity_id": "task-uuid"
+  }'
+```
+
+#### Example: Get Notes for a Task
+```bash
+curl "http://localhost:3001/api/notes?entity_type=task&entity_id=task-uuid"
 ```
 
 ### People API
@@ -535,6 +726,58 @@ curl -X PUT http://localhost:3001/api/tasks/task-uuid/assignee \
   -d '{"assignee_id": "person-uuid"}'
 ```
 
+### Project Assignments API (v1.3.0)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `PUT` | `/projects/:id/owner` | Set project owner (body: `{ personId: string \| null }`) |
+| `GET` | `/projects/:id/assignees` | Get all project assignees |
+| `POST` | `/projects/:id/assignees` | Add assignee to project (body: `{ personId: string, role?: string }`) |
+| `DELETE` | `/projects/:id/assignees/:assigneeId` | Remove assignee from project |
+
+#### Example: Set Project Owner
+```bash
+curl -X PUT http://localhost:3001/api/projects/project-uuid/owner \
+  -H "Content-Type: application/json" \
+  -d '{"personId": "person-uuid"}'
+```
+
+#### Example: Add Project Assignee
+```bash
+curl -X POST http://localhost:3001/api/projects/project-uuid/assignees \
+  -H "Content-Type: application/json" \
+  -d '{
+    "personId": "person-uuid",
+    "role": "lead"
+  }'
+```
+
+#### Example: Get Project Assignees
+```bash
+curl http://localhost:3001/api/projects/project-uuid/assignees
+```
+
+Response:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "assignee-uuid",
+      "project_id": "project-uuid",
+      "person_id": "person-uuid",
+      "role": "lead",
+      "person": {
+        "id": "person-uuid",
+        "name": "John Doe",
+        "email": "john@example.com"
+      },
+      "created_at": "2026-02-18T10:00:00Z"
+    }
+  ]
+}
+```
+
 ### Task Tags API
 
 | Method | Endpoint | Description |
@@ -590,6 +833,8 @@ server/data/taskmanager.db
 | `name` | TEXT | Project name |
 | `description` | TEXT | Project description |
 | `color` | TEXT | Hex color code |
+| `parent_project_id` | TEXT | Foreign key to parent project (v1.2.0) |
+| `owner_id` | TEXT | Foreign key to people - project owner (v1.3.0) |
 | `created_at` | DATETIME | Creation timestamp |
 | `updated_at` | DATETIME | Last update timestamp |
 
@@ -598,6 +843,7 @@ server/data/taskmanager.db
 |--------|------|-------------|
 | `id` | TEXT | Primary key (UUID) |
 | `project_id` | TEXT | Foreign key to projects |
+| `parent_task_id` | TEXT | Foreign key to parent task (v1.2.0) |
 | `title` | TEXT | Task title |
 | `description` | TEXT | Task description |
 | `status` | TEXT | Task status (backlog/todo/in_progress/review/done) |
@@ -605,6 +851,20 @@ server/data/taskmanager.db
 | `start_date` | DATE | Task start date |
 | `due_date` | DATE | Task due date |
 | `assignee_id` | TEXT | Foreign key to people (primary assignee) |
+| `progress_percent` | INTEGER | Completion percentage 0-100 (v1.2.0) |
+| `estimated_duration_minutes` | INTEGER | Estimated time (v1.2.0) |
+| `actual_duration_minutes` | INTEGER | Actual time spent (v1.2.0) |
+| `created_at` | DATETIME | Creation timestamp |
+| `updated_at` | DATETIME | Last update timestamp |
+
+#### `notes` (v1.2.0)
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | TEXT | Primary key (UUID) |
+| `content` | TEXT | Markdown note content |
+| `entity_type` | TEXT | Type: 'project', 'task', or 'person' |
+| `entity_id` | TEXT | ID of the related entity |
+| `created_by` | TEXT | Foreign key to people (optional) |
 | `created_at` | DATETIME | Creation timestamp |
 | `updated_at` | DATETIME | Last update timestamp |
 
@@ -647,12 +907,22 @@ server/data/taskmanager.db
 | `tag_id` | TEXT | Foreign key to tags (CASCADE DELETE) |
 | `created_at` | DATETIME | Creation timestamp |
 
+#### `project_assignees` (v1.3.0)
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | TEXT | Primary key (UUID) |
+| `project_id` | TEXT | Foreign key to projects (CASCADE DELETE) |
+| `person_id` | TEXT | Foreign key to people (CASCADE DELETE) |
+| `role` | TEXT | Role: 'lead', 'member', or 'observer' |
+| `created_at` | DATETIME | Creation timestamp |
+
 ### Seeded Data
 On first run, the database is automatically seeded with:
-- 3 sample projects
-- 15+ sample tasks across various statuses
+- 3 sample projects (with nested sub-projects in v1.2.0)
+- 15+ sample tasks across various statuses (with sub-tasks in v1.2.0)
 - Sample people contacts
 - Sample tags
+- Sample notes (v1.2.0)
 
 ---
 
@@ -661,6 +931,7 @@ On first run, the database is automatically seeded with:
 ```
 task-tracking/
 ├── ARCHITECTURE.md          # Detailed architecture documentation
+├── AGENTS.md                # AI agent workflow documentation
 ├── README.md               # This file
 │
 ├── server/                 # Backend Express application
@@ -676,7 +947,8 @@ task-tracking/
 │       ├── projects.js    # Project API routes
 │       ├── tasks.js       # Task API routes
 │       ├── people.js      # People API routes
-│       └── tags.js        # Tags API routes
+│       ├── tags.js        # Tags API routes
+│       └── notes.js       # Notes API routes (v1.2.0)
 │
 └── client/                # Frontend React application
     ├── package.json
@@ -699,7 +971,8 @@ task-tracking/
         │   ├── ProjectContext.tsx
         │   ├── TaskContext.tsx
         │   ├── PeopleContext.tsx
-        │   └── TagContext.tsx
+        │   ├── TagContext.tsx
+        │   └── NoteContext.tsx      # v1.2.0
         │
         └── components/
             ├── common/    # Reusable UI components
@@ -707,6 +980,14 @@ task-tracking/
             │   ├── Button.tsx
             │   ├── Card.tsx
             │   ├── Modal.tsx
+            │   ├── ProgressBar.tsx        # v1.2.0
+            │   ├── TreeView.tsx           # v1.2.0
+            │   ├── ProjectTreeNode.tsx    # v1.2.0
+            │   ├── TaskTreeNode.tsx       # v1.2.0
+            │   ├── TaskProgressIndicator.tsx  # v1.2.0
+            │   ├── NoteCard.tsx           # v1.2.0
+            │   ├── NoteEditor.tsx         # v1.2.0
+            │   ├── NotesPanel.tsx         # v1.2.0
             │   ├── ProjectForm.tsx
             │   ├── TaskForm.tsx
             │   ├── PersonForm.tsx
@@ -727,6 +1008,7 @@ task-tracking/
             │   ├── ListView.tsx
             │   ├── SortHeader.tsx
             │   ├── TaskListItem.tsx
+            │   ├── TaskRow.tsx
             │   └── TaskRow.tsx
             │
             ├── calendar/  # Calendar view components
@@ -764,6 +1046,7 @@ Features:
 - Priority badges with color coding
 - Due date display
 - Assignee and tag display
+- Progress bars (v1.2.0)
 
 ### 📝 List View
 A traditional table-based view for detailed task management:
@@ -772,6 +1055,7 @@ A traditional table-based view for detailed task management:
 - Filter by assignee and tags
 - Full-text search
 - Bulk task overview
+- Progress column (v1.2.0)
 
 ### 📅 Calendar View
 Monthly calendar showing tasks by due date:
@@ -786,6 +1070,7 @@ Gantt-style visualization of task durations:
 - Today marker (vertical line)
 - Visual duration bars
 - Scrollable timeline
+- Nested task visualization (v1.2.0)
 
 ### 📊 Dashboard
 Project overview with statistics and visualizations:
@@ -793,6 +1078,7 @@ Project overview with statistics and visualizations:
 - **Task Distribution Chart**: Pie chart of tasks by status
 - **Priority Breakdown**: Bar chart of priority distribution
 - **Upcoming Deadlines**: List of tasks due soon
+- **Progress Overview**: Average completion percentage (v1.2.0)
 
 ### 👥 People View
 Contact management and team overview:
@@ -809,8 +1095,8 @@ Contact management and team overview:
 Potential improvements for future development:
 
 - [x] ~~**Labels/Tags** - Custom categorization system~~ ✅ Implemented
+- [x] ~~**Subtasks** - Break down tasks into smaller items~~ ✅ Implemented v1.2.0
 - [ ] **Task Dependencies** - Link tasks with dependencies
-- [ ] **Subtasks** - Break down tasks into smaller items
 - [ ] **Time Tracking** - Log time spent on tasks
 - [ ] **Export/Import** - Export data to JSON/CSV
 - [ ] **Keyboard Shortcuts** - Power user navigation

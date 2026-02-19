@@ -5,6 +5,9 @@ import type {
   Tag,
   TaskAssignee,
   TaskTag,
+  Note,
+  TreeNode,
+  TaskProgressRollup,
   CreateProjectDTO,
   UpdateProjectDTO,
   CreateTaskDTO,
@@ -13,8 +16,15 @@ import type {
   UpdatePersonDTO,
   CreateTagDTO,
   UpdateTagDTO,
+  CreateNoteDTO,
+  UpdateNoteDTO,
+  UpdateTaskProgressDTO,
+  MoveEntityDTO,
   TaskFilters,
   ApiResponse,
+  ProjectAssignee,
+  ProjectAssigneeRole,
+  CreateProjectAssigneeDTO,
 } from '../types';
 
 const API_BASE_URL = '/api';
@@ -306,6 +316,189 @@ export async function deleteTag(id: number): Promise<void> {
   await handleResponse<{ message: string }>(response);
 }
 
+// ============ Notes API ============
+
+export async function getNotes(entityType: string, entityId: number): Promise<Note[]> {
+  const response = await fetch(`${API_BASE_URL}/notes?entity_type=${entityType}&entity_id=${entityId}`);
+  return handleResponse<Note[]>(response);
+}
+
+export async function getNote(id: number): Promise<Note> {
+  const response = await fetch(`${API_BASE_URL}/notes/${id}`);
+  return handleResponse<Note>(response);
+}
+
+export async function createNote(data: CreateNoteDTO): Promise<Note> {
+  const response = await fetch(`${API_BASE_URL}/notes`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<Note>(response);
+}
+
+export async function updateNote(id: number, data: UpdateNoteDTO): Promise<Note> {
+  const response = await fetch(`${API_BASE_URL}/notes/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<Note>(response);
+}
+
+export async function deleteNote(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/notes/${id}`, {
+    method: 'DELETE',
+  });
+  await handleResponse<{ message: string }>(response);
+}
+
+// ============ Project Hierarchy API ============
+
+export async function getRootProjects(): Promise<Project[]> {
+  const response = await fetch(`${API_BASE_URL}/projects/root`);
+  return handleResponse<Project[]>(response);
+}
+
+export async function getProjectChildren(id: number): Promise<Project[]> {
+  const response = await fetch(`${API_BASE_URL}/projects/${id}/children`);
+  return handleResponse<Project[]>(response);
+}
+
+export async function getProjectDescendants(id: number): Promise<Project[]> {
+  const response = await fetch(`${API_BASE_URL}/projects/${id}/descendants`);
+  return handleResponse<Project[]>(response);
+}
+
+export async function getProjectTree(id: number): Promise<TreeNode<Project>> {
+  const response = await fetch(`${API_BASE_URL}/projects/${id}/tree`);
+  return handleResponse<TreeNode<Project>>(response);
+}
+
+export async function createSubProject(parentId: number, data: CreateProjectDTO): Promise<Project> {
+  const response = await fetch(`${API_BASE_URL}/projects/${parentId}/subprojects`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<Project>(response);
+}
+
+export async function moveProject(id: number, parentId: number | null): Promise<Project> {
+  const response = await fetch(`${API_BASE_URL}/projects/${id}/move`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ parent_id: parentId } as MoveEntityDTO),
+  });
+  return handleResponse<Project>(response);
+}
+
+// ============ Project Assignments API ============
+
+export async function setProjectOwner(projectId: number, personId: number | null): Promise<Project> {
+  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/owner`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ owner_id: personId }),
+  });
+  return handleResponse<Project>(response);
+}
+
+export async function getProjectAssignees(projectId: number): Promise<ProjectAssignee[]> {
+  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/assignees`);
+  return handleResponse<ProjectAssignee[]>(response);
+}
+
+export async function addProjectAssignee(projectId: number, data: CreateProjectAssigneeDTO): Promise<ProjectAssignee> {
+  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/assignees`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ProjectAssignee>(response);
+}
+
+export async function removeProjectAssignee(projectId: number, assigneeId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/assignees/${assigneeId}`, {
+    method: 'DELETE',
+  });
+  await handleResponse<{ message: string }>(response);
+}
+
+// ============ Task Hierarchy API ============
+
+export async function getTaskChildren(id: number): Promise<Task[]> {
+  const response = await fetch(`${API_BASE_URL}/tasks/${id}/children`);
+  return handleResponse<Task[]>(response);
+}
+
+export async function getTaskDescendants(id: number): Promise<Task[]> {
+  const response = await fetch(`${API_BASE_URL}/tasks/${id}/descendants`);
+  return handleResponse<Task[]>(response);
+}
+
+export async function getTaskTree(id: number): Promise<TreeNode<Task>> {
+  const response = await fetch(`${API_BASE_URL}/tasks/${id}/tree`);
+  return handleResponse<TreeNode<Task>>(response);
+}
+
+export async function createSubTask(parentId: number, data: CreateTaskDTO): Promise<Task> {
+  const response = await fetch(`${API_BASE_URL}/tasks/${parentId}/subtasks`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<Task>(response);
+}
+
+export async function moveTask(id: number, parentId: number | null): Promise<Task> {
+  const response = await fetch(`${API_BASE_URL}/tasks/${id}/move`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ parent_id: parentId } as MoveEntityDTO),
+  });
+  return handleResponse<Task>(response);
+}
+
+export async function getRootTasks(projectId: number): Promise<Task[]> {
+  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/tasks/root`);
+  return handleResponse<Task[]>(response);
+}
+
+// ============ Task Progress API ============
+
+export async function updateTaskProgress(id: number, data: UpdateTaskProgressDTO): Promise<Task> {
+  const response = await fetch(`${API_BASE_URL}/tasks/${id}/progress`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<Task>(response);
+}
+
+export async function getTaskProgressRollup(id: number): Promise<TaskProgressRollup> {
+  const response = await fetch(`${API_BASE_URL}/tasks/${id}/progress/rollup`);
+  return handleResponse<TaskProgressRollup>(response);
+}
+
 // Export all functions as a unified API object
 export const api = {
   projects: {
@@ -315,6 +508,16 @@ export const api = {
     update: updateProject,
     delete: deleteProject,
     getTasks: getProjectTasks,
+    getRoot: getRootProjects,
+    getChildren: getProjectChildren,
+    getDescendants: getProjectDescendants,
+    getTree: getProjectTree,
+    createSub: createSubProject,
+    move: moveProject,
+    setOwner: setProjectOwner,
+    getAssignees: getProjectAssignees,
+    addAssignee: addProjectAssignee,
+    removeAssignee: removeProjectAssignee,
   },
   tasks: {
     getAll: getTasks,
@@ -330,6 +533,14 @@ export const api = {
     getTags: getTaskTags,
     addTag: addTaskTag,
     removeTag: removeTaskTag,
+    getChildren: getTaskChildren,
+    getDescendants: getTaskDescendants,
+    getTree: getTaskTree,
+    createSub: createSubTask,
+    move: moveTask,
+    updateProgress: updateTaskProgress,
+    getProgressRollup: getTaskProgressRollup,
+    getRoot: getRootTasks,
   },
   people: {
     getAll: getPeople,
@@ -344,6 +555,13 @@ export const api = {
     create: createTag,
     update: updateTag,
     delete: deleteTag,
+  },
+  notes: {
+    getAll: getNotes,
+    getOne: getNote,
+    create: createNote,
+    update: updateNote,
+    delete: deleteNote,
   },
 };
 

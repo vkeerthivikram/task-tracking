@@ -4,9 +4,10 @@ import { CSS } from '@dnd-kit/utilities';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { format } from 'date-fns';
-import { Calendar, Users } from 'lucide-react';
+import { Calendar, Users, GitBranch } from 'lucide-react';
 import type { Task, TaskPriority } from '../../types';
 import { PriorityBadge, TagBadge } from '../common/Badge';
+import { MiniProgressBar } from '../common/ProgressBar';
 
 interface TaskCardProps {
   task: Task;
@@ -70,6 +71,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
   // Get first few tags (max 3 visible)
   const visibleTags = task.tags?.slice(0, 3) || [];
   const remainingTagCount = (task.tags?.length || 0) - visibleTags.length;
+  
+  // Check if task has progress
+  const hasProgress = task.progress_percent !== undefined && task.progress_percent > 0;
+  
+  // Check if task has parent (is a subtask)
+  const isSubtask = task.parent_task_id !== undefined && task.parent_task_id !== null;
 
   return (
     <div
@@ -108,6 +115,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
 
       {/* Card content */}
       <div className="pl-2">
+        {/* Subtask indicator */}
+        {isSubtask && (
+          <div className="flex items-center gap-1 mb-1 text-xs text-gray-400 dark:text-gray-500">
+            <GitBranch className="w-3 h-3" aria-hidden="true" />
+            <span>Subtask</span>
+          </div>
+        )}
+        
         {/* Title */}
         <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">
           {task.title}
@@ -131,6 +146,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
                 +{remainingTagCount}
               </span>
             )}
+          </div>
+        )}
+
+        {/* Progress Bar - Show if progress > 0 */}
+        {hasProgress && (
+          <div className="mb-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-gray-500 dark:text-gray-400">Progress</span>
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+                {task.progress_percent}%
+              </span>
+            </div>
+            <MiniProgressBar percent={task.progress_percent!} />
           </div>
         )}
 

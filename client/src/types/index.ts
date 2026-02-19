@@ -7,12 +7,19 @@ export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 // View Types
 export type ViewType = 'kanban' | 'list' | 'calendar' | 'timeline' | 'dashboard' | 'people';
 
+// Note Entity Types
+export type NoteEntityType = 'project' | 'task' | 'person';
+
 // Project Interface
 export interface Project {
   id: number;
   name: string;
   description: string;
   color: string;
+  parent_project_id?: number | null;
+  owner_id?: number | null;
+  owner?: Person;
+  assignees?: ProjectAssignee[];
   created_at: string;
   updated_at: string;
 }
@@ -37,6 +44,19 @@ export interface Tag {
   project_id?: number;
   created_at: string;
   updated_at: string;
+}
+
+// Project Assignee Role Type
+export type ProjectAssigneeRole = 'lead' | 'member' | 'observer';
+
+// Project Assignee Interface
+export interface ProjectAssignee {
+  id: number;
+  project_id: number;
+  person_id: number;
+  role: ProjectAssigneeRole;
+  person?: Person;
+  created_at: string;
 }
 
 // Task Assignee Interface (for co-assignees)
@@ -72,8 +92,36 @@ export interface Task {
   assignee?: Person;
   coAssignees?: TaskAssignee[];
   tags?: TaskTag[];
+  parent_task_id?: number | null;
+  progress_percent?: number;
+  estimated_duration_minutes?: number;
+  actual_duration_minutes?: number;
   created_at: string;
   updated_at: string;
+}
+
+// Note Interface
+export interface Note {
+  id: number;
+  content: string;
+  entity_type: NoteEntityType;
+  entity_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Tree Node Interface (for hierarchical data)
+export interface TreeNode<T> {
+  data: T;
+  children: TreeNode<T>[];
+}
+
+// Task Progress Rollup Interface
+export interface TaskProgressRollup {
+  task_id: number;
+  progress_percent: number;
+  children_count: number;
+  children_progress: TaskProgressRollup[];
 }
 
 // Create/Update DTOs
@@ -81,12 +129,16 @@ export interface CreateProjectDTO {
   name: string;
   description?: string;
   color?: string;
+  parent_project_id?: number | null;
+  owner_id?: number | null;
 }
 
 export interface UpdateProjectDTO {
   name?: string;
   description?: string;
   color?: string;
+  parent_project_id?: number | null;
+  owner_id?: number | null;
 }
 
 export interface CreatePersonDTO {
@@ -126,6 +178,10 @@ export interface CreateTaskDTO {
   due_date?: string | null;
   start_date?: string | null;
   assignee_id?: number;
+  parent_task_id?: number | null;
+  progress_percent?: number;
+  estimated_duration_minutes?: number;
+  actual_duration_minutes?: number;
 }
 
 export interface UpdateTaskDTO {
@@ -136,6 +192,33 @@ export interface UpdateTaskDTO {
   due_date?: string | null;
   start_date?: string | null;
   assignee_id?: number;
+  parent_task_id?: number | null;
+  progress_percent?: number;
+  estimated_duration_minutes?: number;
+  actual_duration_minutes?: number;
+}
+
+// Note DTOs
+export interface CreateNoteDTO {
+  entity_type: NoteEntityType;
+  entity_id: number;
+  content: string;
+}
+
+export interface UpdateNoteDTO {
+  content: string;
+}
+
+// Progress Update DTO
+export interface UpdateTaskProgressDTO {
+  progress_percent?: number;
+  estimated_duration_minutes?: number;
+  actual_duration_minutes?: number;
+}
+
+// Move DTO (for reorganizing hierarchy)
+export interface MoveEntityDTO {
+  parent_id: number | null;
 }
 
 // Task Filters
@@ -245,3 +328,10 @@ export const PROJECT_COLORS = [
   '#14B8A6', // Teal
   '#6366F1', // Indigo
 ];
+
+// CreateProjectAssigneeDTO
+export interface CreateProjectAssigneeDTO {
+  project_id: number;
+  person_id: number;
+  role: ProjectAssigneeRole;
+}

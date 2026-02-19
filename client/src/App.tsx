@@ -5,6 +5,7 @@ import { ProjectProvider, useProjects } from './context/ProjectContext';
 import { TaskProvider } from './context/TaskContext';
 import { PeopleProvider } from './context/PeopleContext';
 import { TagProvider } from './context/TagContext';
+import { NoteProvider } from './context/NoteContext';
 import { Layout } from './components/layout/Layout';
 import { KanbanBoard } from './components/kanban/KanbanBoard';
 import { ListView } from './components/list/ListView';
@@ -282,7 +283,11 @@ function App() {
       <ProjectProvider>
         <PeopleProvider>
           <TagProvider>
-            <AppContent />
+            <TaskProviderWrapper>
+              <NoteProvider>
+                <AppContent />
+              </NoteProvider>
+            </TaskProviderWrapper>
           </TagProvider>
         </PeopleProvider>
       </ProjectProvider>

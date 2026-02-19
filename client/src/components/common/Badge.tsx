@@ -98,8 +98,9 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
 Badge.displayName = 'Badge';
 
 // Status Badge Component
-interface StatusBadgeProps extends Omit<BadgeProps, 'variant'> {
+interface StatusBadgeProps extends Omit<BadgeProps, 'variant' | 'children'> {
   status: TaskStatus;
+  children?: ReactNode;
 }
 
 const statusVariants: Record<TaskStatus, BadgeVariant> = {
@@ -131,8 +132,9 @@ export const StatusBadge = forwardRef<HTMLSpanElement, StatusBadgeProps>(
 StatusBadge.displayName = 'StatusBadge';
 
 // Priority Badge Component
-interface PriorityBadgeProps extends Omit<BadgeProps, 'variant'> {
+interface PriorityBadgeProps extends Omit<BadgeProps, 'variant' | 'children'> {
   priority: TaskPriority;
+  children?: ReactNode;
 }
 
 const priorityVariants: Record<TaskPriority, BadgeVariant> = {

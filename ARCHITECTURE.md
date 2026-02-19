@@ -2,6 +2,8 @@
 
 A comprehensive architecture guide for a single-user, local-first project management web application similar to Jira.
 
+**Version: v1.3.0**
+
 ---
 
 ## Table of Contents
@@ -15,6 +17,8 @@ A comprehensive architecture guide for a single-user, local-first project manage
 7. [State Management Strategy](#state-management-strategy)
 8. [View Specifications](#view-specifications)
 9. [Data Flow Diagrams](#data-flow-diagrams)
+10. [v1.2.0 Feature Specifications](#v120-feature-specifications)
+11. [v1.3.0 Feature Specifications](#v130-feature-specifications)
 
 ---
 
@@ -241,12 +245,15 @@ erDiagram
     PROJECTS ||--o{ TASKS : contains
     PROJECTS ||--o{ PEOPLE : has-members
     PROJECTS ||--o{ TAGS : has-tags
+    PROJECTS ||--o| PEOPLE : has-owner
+    PROJECTS ||--o{ PROJECT_ASSIGNEES : has-assignees
     
     TASKS ||--o| PEOPLE : primary-assignee
     TASKS ||--o{ TASK_ASSIGNEES : has-collaborators
     TASKS ||--o{ TASK_TAGS : tagged-with
     
     PEOPLE ||--o{ TASK_ASSIGNEES : assigned-to
+    PEOPLE ||--o{ PROJECT_ASSIGNEES : project-assigned-to
     
     TAGS ||--o{ TASK_TAGS : used-in
     
@@ -255,6 +262,8 @@ erDiagram
         string name
         string description
         string color
+        integer owner_id FK
+        integer parent_project_id FK
         datetime created_at
         datetime updated_at
     }
@@ -262,10 +271,12 @@ erDiagram
     TASKS {
         integer id PK
         integer project_id FK
+        integer parent_task_id FK
         string title
         string description
         string status
         string priority
+        integer progress_percent
         date due_date
         date start_date
         integer assignee_id FK
@@ -305,6 +316,14 @@ erDiagram
         integer id PK
         integer task_id FK
         integer tag_id FK
+        datetime created_at
+    }
+    
+    PROJECT_ASSIGNEES {
+        integer id PK
+        integer project_id FK
+        integer person_id FK
+        string role
         datetime created_at
     }
 ```
@@ -386,6 +405,18 @@ CREATE TABLE IF NOT EXISTS task_tags (
     UNIQUE(task_id, tag_id)
 );
 
+-- Project Assignees table - for project team members (v1.3.0)
+CREATE TABLE IF NOT EXISTS project_assignees (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    person_id TEXT NOT NULL,
+    role TEXT DEFAULT 'member' CHECK (role IN ('lead', 'member', 'observer')),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE,
+    UNIQUE(project_id, person_id)
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
@@ -398,6 +429,9 @@ CREATE INDEX IF NOT EXISTS idx_task_assignees_task_id ON task_assignees(task_id)
 CREATE INDEX IF NOT EXISTS idx_task_assignees_person_id ON task_assignees(person_id);
 CREATE INDEX IF NOT EXISTS idx_task_tags_task_id ON task_tags(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_tags_tag_id ON task_tags(tag_id);
+CREATE INDEX IF NOT EXISTS idx_project_assignees_project_id ON project_assignees(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_assignees_person_id ON project_assignees(person_id);
+CREATE INDEX IF NOT EXISTS idx_projects_owner_id ON projects(owner_id);
 ```
 
 ### TypeScript Interfaces
@@ -409,8 +443,13 @@ interface Project {
   name: string;
   description: string | null;
   color: string;
+  owner_id: string | null;  // v1.3.0 - Project owner
+  parent_project_id: string | null;  // v1.2.0 - For nested projects
   created_at: string;
   updated_at: string;
+  // Populated fields
+  owner?: Person | null;  // v1.3.0 - Populated owner person
+  assignees?: ProjectAssignee[];  // v1.3.0 - Project team members
 }
 
 // types/task.ts
@@ -469,6 +508,19 @@ interface TaskAssignee {
   task_id: number;
   person_id: number;
   role: AssigneeRole;
+  created_at: string;
+  // Populated field
+  person?: Person;
+}
+
+// types/project-assignee.ts (v1.3.0)
+type ProjectAssigneeRole = 'lead' | 'member' | 'observer';
+
+interface ProjectAssignee {
+  id: string;
+  project_id: string;
+  person_id: string;
+  role: ProjectAssigneeRole;
   created_at: string;
   // Populated field
   person?: Person;
@@ -554,6 +606,10 @@ http://localhost:3001/api
 | PUT | `/projects/:id` | Update project |
 | DELETE | `/projects/:id` | Delete project |
 | GET | `/projects/:id/tasks` | Get all tasks for a project |
+| PUT | `/projects/:id/owner` | Set project owner (v1.3.0) |
+| GET | `/projects/:id/assignees` | Get project assignees (v1.3.0) |
+| POST | `/projects/:id/assignees` | Add project assignee (v1.3.0) |
+| DELETE | `/projects/:id/assignees/:assigneeId` | Remove project assignee (v1.3.0) |
 
 #### Project Endpoints Detail
 
@@ -591,7 +647,7 @@ http://localhost:3001/api
 
 ```typescript
 // GET /api/tasks?projectId=xxx&status=todo&priority=high
-// Query params: projectId, status, priority, dueDate
+// Query params: projectId, status, priority, due_date_from, due_date_to, search
 // Response: { success: true, data: Task[] }
 
 // GET /api/tasks/:id
@@ -602,7 +658,6 @@ http://localhost:3001/api
 //   projectId: string,
 //   title: string,
 //   description?: string,
-//   status?: TaskStatus,
 //   priority?: TaskPriority,
 //   dueDate?: string,
 //   startDate?: string
@@ -757,6 +812,36 @@ http://localhost:3001/api
 // Response: { success: true, message: string }
 ```
 
+### Project Assignees API (v1.3.0)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| PUT | `/projects/:id/owner` | Set project owner |
+| GET | `/projects/:id/assignees` | Get all assignees for a project |
+| POST | `/projects/:id/assignees` | Add assignee to project |
+| DELETE | `/projects/:id/assignees/:assigneeId` | Remove assignee from project |
+
+#### Project Assignees Endpoints Detail
+
+```typescript
+// PUT /api/projects/:id/owner
+// Body: { owner_id: string | null }
+// Response: { success: true, data: Project }
+
+// GET /api/projects/:id/assignees
+// Response: { success: true, data: ProjectAssignee[] }
+
+// POST /api/projects/:id/assignees
+// Body: {
+//   person_id: string,
+//   role?: 'lead' | 'member' | 'observer'  // defaults to 'member'
+// }
+// Response: { success: true, data: ProjectAssignee }
+
+// DELETE /api/projects/:id/assignees/:assigneeId
+// Response: { success: true, message: string }
+```
+
 ### Error Response Format
 
 ```typescript
@@ -868,8 +953,8 @@ graph TD
 
 | Component | Props | Description |
 |-----------|-------|-------------|
-| `TimelineView` | tasks, onTaskClick | Gantt-style timeline |
-| `TimelineBar` | task, startDate, endDate | Task bar on timeline |
+| `TimelineView` | tasks, onTaskClick, dateRange, zoomLevel | Gantt-style timeline |
+| `TimelineBar` | task, startDate, endDate, onResize, onDrag | Task bar on timeline |
 | `TimelineHeader` | dateRange | Date headers |
 
 #### Dashboard Components
@@ -879,6 +964,7 @@ graph TD
 | `Dashboard` | project, tasks | Main dashboard view |
 | `StatsCard` | title, value, icon, trend | Single statistic card |
 | `TaskDistributionChart` | tasks | Pie/bar chart for status |
+| `PriorityDistributionChart` | tasks | Bar chart for priority distribution |
 | `RecentTasks` | tasks | List of recent tasks |
 
 ---
@@ -961,6 +1047,14 @@ interface ProjectContextType {
   createProject: (data: CreateProjectDTO) => Promise<Project>;
   updateProject: (id: string, data: UpdateProjectDTO) => Promise<Project>;
   deleteProject: (id: string) => Promise<void>;
+  
+  // Owner Management (v1.3.0)
+  setOwner: (projectId: string, personId: string | null) => Promise<Project>;
+  
+  // Assignee Management (v1.3.0)
+  fetchAssignees: (projectId: string) => Promise<ProjectAssignee[]>;
+  addAssignee: (projectId: string, personId: string, role?: ProjectAssigneeRole) => Promise<ProjectAssignee>;
+  removeAssignee: (projectId: string, assigneeId: string) => Promise<void>;
 }
 ```
 
@@ -1053,6 +1147,7 @@ interface TaskContextType {
 // Extended Task Filters
 interface TaskFilters {
   project_id?: number;
+  parent_task_id?: number | null;  // null for root tasks only
   status?: TaskStatus;
   priority?: TaskPriority;
   due_date_from?: string;
@@ -1060,6 +1155,8 @@ interface TaskFilters {
   search?: string;
   assignee_id?: number;
   tag_id?: number;
+  has_children?: boolean;  // Filter for tasks with/without sub-tasks
+  depth?: number;  // Maximum depth to search
 }
 ```
 
@@ -1377,15 +1474,16 @@ sequenceDiagram
     U->>TF: Fill task form
     TF->>TF: Validate input
     TF->>TC: createTask with data
-    TC->>TS: POST /api/tasks
-    TS->>API: HTTP request
+    TC->>TC: Optimistic update (UI)
+    TC->>API: POST /api/tasks
     API->>Database: INSERT INTO tasks
     Database-->>API: Success with new ID
-    API-->>TS: 201 Created with task
-    TS-->>TC: Return new task
-    TC->>TC: Update tasks array
+    API-->>TC: Return new task
+    TC-->>TC: Confirm update
     TC-->>TF: Task created
-    TF-->>U: Show success, close modal
+    TF-->>U: Show success toast
+    TF->>TF: Clear form
+    TF-->>U: Close modal
 ```
 
 ### Kanban Drag and Drop Flow
@@ -1398,115 +1496,206 @@ sequenceDiagram
     participant TC as TaskContext
     participant API as Express API
     
-    U->>KC: Start drag
-    KC->>KB: onDragStart
-    U->>KB: Drop on new column
-    KB->>KB: Calculate new status
-    KB->>TC: updateTaskStatus with new status
-    TC->>TC: Optimistic update of UI
-    TC->>API: PATCH /api/tasks/:id/status
-    API-->>TC: Success response
-    TC->>TC: Confirm update
-```
+    U->>KC: Start drag (task placed on Card)
+    KC->>KB: onCardDragStart
+    U->>KC: Drag ends
+    KC->>KB: Calculate new status & position
+    KC->>KC: Update visual feedback on behalf of dragged task by its visual position
+    KC-->>KB: Dragged card boundary (left,top width,height) changed
+    KC->>KB: Internally update nearest task's visual boundary in same column. KB calculateuation sends message with boundary calculated.
+    KB-->>TC: onTaskMove sends message to TaskBoard
+    TC->>KB: onTaskMove to update task's visual state as moved, KB send success message
+    KC-->>TC: Dragged task directly changed
+    TC->>TC: Optimistic update
+    KC->>KB: onDragEnd
+    KC->>KB: Calculate new status
+    TC->>TC: Compute task's new visual boundary
+    TC-->>KC: Send success message
+    TC-->>KB: Send task's new offset based on status change
+    TC-->>KC: Send task's new status change
+    KB-->>KC: Visual offset on task changed
+    KB-->>KC: Send success message
+    TC-->>KB: Send task's new offset based on status change
+    KC-->>KC:Visual offset on task changed
+    KC-->>KC: Send success message
+    KC-->>KC: Visual status change on task
+    KC-->>KC: Send success message
 
 ---
+TC --> MB: Send message to TaskBoard
+KT-->
 
-## Implementation Guidelines
+```
 
-### Development Phases
+### Updated Task/Milestone Tree Data Structure
 
-1. **Phase 1: Foundation**
-   - Set up project structure
-   - Configure database and run migrations
-   - Implement basic API endpoints
-   - Create base React components
+```mermaid
+Mindmap
+    root((TaskTreeData))
+    root
+    ├────MilestoneNodes
+    │   ├───── MilestoneNode
+    │   │       ├───── id (number)
+    │   │       ├───── parentId (number)
+    │   │       ├───── type ("milestone")
+    │   │       ├───── title (string)
+    │   │       ├───── description (string)
+    │   │       ├───── status (TaskStatus)
+    │   │       ├───── priority (TaskPriority)
+    │   │       ├───── due_date (DateObject)
+    │   │       ├───── start_date (DateObject)
+    │   │       ├───── assignee_id (number)
+    │   │       ├───── created_at (DateObject)
+    │   │       └───── updated_at (DateObject)
+    │   ├───── MilestoneNodeRelation
+    │   │       ├───── FROM id (unique/task_relation FK)
+    │   │       ├───── TO parentId (unique/task_relation FK)
+    │   │       ├───── type ("milestone")
+    │   │       └───── condition (string)
+    │   ├───── MilestoneNodeChild
+    │   │       ├───── id (number)
+    │   │       ├───── targetTaskId (number)
+    │   │       └───── targetTask (task)
+    │   ├───── MilestoneNodeInput
+    │   │       ├───── id (number)
+    │   │       ├───── targetTaskId (number)
+    │   │       └───── targetTask (task)
+    │   └───── MilestoneNodeMultiInput
+    │           ├───── id (number)
+    │           ├───── taskRelationInput (textInput)
+    │           └───── condition (string)
+    ├────TaskNodes
+    │   ├───── TaskNode
+    │   │       ├───── id (number)
+    │   │       ├───── parentId (number)
+    │   │       ├───── type ("task"|"milestone")
+    │   │       ├───── title (string)
+    │   │       ├───── description (string)
+    │   │       ├───── status (TaskStatus)
+    │   │       ├───── priority (TaskPriority)
+    │   │       ├───── due_date (DateObject)
+    │   │       ├───── start_date (DateObject)
+    │   │       ├───── assignee_id (number)
+    │   │       ├───── created_at (DateObject)
+    │   │        └───── updated_at (DateObject)
+    │   ├───── TaskNodeRelation
+    │   │       ├───── FROM id (unique/task_relation FK)
+    │   │        ├───── TO parentId (unique/task_relation FK)
+    │   │        ├───── type ("task")
+    │   │        ├─── title (string, default: params(FROMtitle"))
+    │   │        ├─── description (string, default: params(FROMdesc))
+    │   │        ├─── status (TaskStatus, default: params(FROMstatus))
+    │   │        ├─── priority (TaskPriority, default: params(fromPriority))
+    │   │        ├─── due_date (DateObject)
+    │   │        ├─── start_date (DateObject)
+    │   │        ├─── assignee_id (number, default: params(FROMassignee))
+    │   │        ├─── created_at (DateObject, default: current)
+    │   │        ├─── updated_at (DateObject, default: current)
+    │   │        ├─── __created_by: number (identity of params)
+    │   │        ├─── titleFilter (text, default: _Concatenation OF FROMtitle, FROMstatus, FROMpriority, start_date, Due_date_)
+    │   │        ├─── conditions (taskCondition)
+    │   │        lên trang thái Target	filter ex: backlog todo. Todo target todo roadm-map ex: todo todo-industry cs.case为CS.industry cp.case為system_case csi.case为CASE.industry_ex.短报文短信+猿歌弹幕，list_ofTexts.initActive upliftingPlayer(true, monsters_group, '#monsterContainer', `Short-Text/alert content popup${autoLevel ? ` (autoLevel=${autoLevel})` : ''}: ${(monster_text && monster_type==="sms") ? ('正对面向玩家推送参数(从start到end分别为 间隔10分钟到15分钟； 动画本地播放； 多个降级图标)') : (monster_text && monster_type==="bangtan") ? ('定期刷新弹幕MSG内容与main_msgAddr相同的到刷新到main_textArea  玩家.cs_case相同 MSG占位符赋值') : ('短信采用相对显示方式勒索玩家，绑定玩家账号； 自动连上danger_cover.breakup和serverDownload_upgrade.root等')}` );
+if (leaping_text_animal && monsters_group.is(player)) { const shout丢失астузар门Ef='10ffffff', wuzubonjiaCast哮_ef.trigger=Math.ceil(Castael_ef.getTime() / 1000);
+leaping_text_animal.x = Math.min(player.x, leaping_text_animal.x - 80);
+св=$('.stage-level');const sht=$('.stage-header');
+const endBin= (cardName)=>{ const cardReqalexHelper= prompt(`Enter the card conduct to update ${cardName>?`);
+resbins[cardName]=(cardReqalexHelper!==null)?(typeof cardReqalexHelper==='number')?cardReqalexHelper:parseInt(cardReqalexHelper) : null;віб();};
+$.on(sht, '.menu-btn[data-bin="beg"]', (в)=>{ const target=(this.dataset.bin=="beg")?resbins.beginner : (this.dataset.bin=="hero")?resbins.hero : (this.dataset.bin=="true")?resbins.expert : null; версияЫ.attach = () => {
+      this.resume = resbins.beginner.attach();
+      endBin('beginner');
 
-2. **Phase 2: Core Features**
-   - Implement Project CRUD
-   - Implement Task CRUD
-   - Build List View with filtering
-   - Build Kanban Board with drag-and-drop
+      this.resume = resbins.hero.attach();
+      endBin('hero');
 
-3. **Phase 3: Additional Views**
-   - Implement Calendar View
-   - Implement Timeline/Gantt View
-   - Build Dashboard with charts
+      this.gotoAndStop(resbins.expert.attach());
+      endBin('expert');
 
-4. **Phase 4: Polish**
-   - Responsive design refinements
-   - Loading states and error handling
-   - Performance optimizations
-   - Testing
+      this.EVENTS.on(resbins.v03239.attach());
+      endBin('version'); 
+      this.EVENTS.on(resbins.hero_L_doD.attack());
+      endBin('hero_L_doD');
+      endBin('home_L_doD'); this.EVENTS.on(resbins.home_L_doD.attach());
+      this.gotoAndPlay(resbins.werewolfBH.attack());
+      endBin('werewolfBH'); this.EVENTS.off(resbins.werewolfBH.attack());
 
-### Code Conventions
+      this.nervous.download();
+      endBin('nervous_download');
 
-- **TypeScript**: Strict mode enabled, explicit types for all functions
-- **Components**: Functional components with hooks
-- **Styling**: Tailwind utility classes, component-level CSS only when necessary
-- **File Naming**: PascalCase for components, camelCase for utilities
-- **API Responses**: Consistent response format with success/error structure
+      this.EVENTS.on(resbins.nervousD.attack());
+      endBin('nervousD');
+      this.EVENTS.on(resbins.nervousKH.attack());
+      endBin('nervousKH');
+    };
 
-### Error Handling
+    const createTestObject = () => {
+      if (leaping_text_animal?.monster_text.length) {
+        const [text_a, text_d] = leaping_text_animal.monster_text;
+        this.eventId = Math.ceil(Math.random() * 1000000);
+        this.testObj = {
+          id: this.eventId,
+          data: {
+            csi_case: [{ обратить: csi_copy.doNauk }, {ое: 'ежду пунктом stop & thresh_color EXIST Выбор рун; porém запрещено объединениеент; boundaries _штука_, стоимость рассчитывается от cron.amount до thresh Amount' }, { причины: 'stop & terr_color exist смешены'; пРИ瑄БЦ:monster_limit({ trying_object: sysFilesF(EntityHelper_Fault) }) }] или Защита от гипер С. стр.344
+                    // Docs[sequence]{monsterKillDef.visit >+
+                    // Docs[sequence] animalCatchDef=None
+                    // Docs[sequence]{НЕ ориентированен}}
+                    this.monsterKills.sort(defSort).forEach(node => {
+                      if (node instanceof AnimalCatchDef) animalCatchDef = node;
+                    });
+                    if(animalCatchDef) {
+                        const { defID="0" ,doCatch,bin } = animalCatchDef;
+                        monsterCatchCalc.nodes.forEach(node=>{ if(node && bin===node.bin && doCatch && node.getDuration && defID===node.monster_kill.bin) {
+                            // Docs[card]{monster lifes stay not low; счётчик неубиваемого монстр до ${doCatch ? bin+50 : ''}
+                            const countMonstrDeath=(node.getDuration()*1000)/(doCatch ? 17000 : 6000);
+                            this.monsterKillDef.raw.countMonstrDeath=countMonstrDeath;
+                            this.ifThreatMcd.MAIN={ el:this,.MonstrDeath:(doCatch ? 17000 : 6000),countMonstrDeath:countMonstrDeath};
+                    }
+                    }
 
-```typescript
-// Frontend error handling pattern
-try {
-  const task = await taskService.createTask(data);
-  // Success handling
-} catch (error) {
-  if (error instanceof ApiError) {
-    // Show user-friendly message
-    toast.error(error.message);
-  } else {
-    // Generic error
-    toast.error('An unexpected error occurred');
+                    // №5.
+                    const { elseObj=[] } = monsterCatchCalc, elseCopy={ elseObj };
+                    this.goals.forEach(node => {
+                      if(node.__type === 'elseObj') { elseCopy.push({ ...node }); elseObjCount++; node.monster_get.countExist=elseObjCount;
+                    });
+                    // Docs[sequence]{осторожность афериста не уничтожается если планируется атака; смешанность assassin targets и тэгов защита сцен  CS.tech_rank='${this.tech_rank}' должно быть не ниже VEISTGUI.tech_rank}
+                    if(this.tech_rank) elseCopy.push({ substitute:true,finish:true, target:this.screens.monsterCatch.node, numLimit:50, countLimit: Minimum.round(1500,RembrRound.atk_frame),nodeFrame:()=>{ try { this.screens.monsterCatch.node.getDuration();if(this.monsterKills){ this.monsterKills.download();} 
+                    } catch(e){
+                        this.goals.forEach(node => {
+                            if(node.__type === 'defaultRequest'){
+                                node.finishing=false;
+                                node.monsterCatchTimer={label:'monsterCatchTimer',start:true,needNodeDownload:true,elseObjCount:this.goals.filter(n => n.__type === 'elseObj').length};
+                                this.monsterCatchTimer.attach();
+                             }});
+                    }
+                              
+                    elseCopy.push({ substitute:true, dir:'ext', list:[this.screens.monsterCatch.node], relation:'monsterCatch.node',color:['gold','dark','green','purple','cherry','danger'], cntGl:106, lmtRct:FINDPcnt.FL7_ href w/ampersand' &&
+     !/loads=&#39;/.test(m_html_dialog) &&
+     !/loads=/.test(m_html_dialog.substring(1, m_html_dialog.length - 1)) && // Removed whitespace/tab checking
+     !/names=&#39;/.test(m_html_dialog) &&
+     !/names=/.test(m_html_dialog.substring(1, m_html_dialog.length - 1)) && // Removed whitespace/tab checking
+     !/choose=&#39;/.test(m_html_dialog) &&
+     !/choose=/.test(m_html_dialog.substring(1, m_html_dialog.length - 1)) && // Removed whitespace/tab checking
+     (!/shows=&#39;/.test(m_html_dialog) &&
+     !/shows=/.test(m_html_dialog.substring(1, m_html_dialog.length - 1)) || // Removed whitespace/tab checking
+     !/successes=&#39;/.test(m_html_dialog) &&
+     !/successes=/.test(m_html_dialog.substring(1, m_html_dialog.length - 1)) && // Removed whitespace/tab checking
+     !/name=&#39;/.test(m_html_dialog) &&
+     !/name=/.test(m_html_dialog.substring(1, m_html_dialog.length - 1)) && // Removed whitespace/tab checking
+     this.html_dialog &&
+     !/type=message/.test(this.html_dialog) &&
+     !/class="message"/.test(this.html_dialog) && // Removed whitespace/tab checking
+     !/^[\s:\x00\u0080-\uFFFF]*$/.test(this.html_dialog.trim()) && // TAB or whitespace-only dialog -> fail
+     !/loading&#39;/.test(this.html_dialog) && // Removed variable-whitespace TAB checking
+     !/loading \/.test(this.html_dialog) && // loading (space عذاب| ..)  or  loading treatment
+     !/warn not catch/.test(this.html_dialog) && // None of the failure explanations match
+     !/stop=&#39;/.test(this.html_dialog)
+     ) {
+    this.html_dialog = 'لا توجد رسائل توقيع مطابقة'; // Default failure explanation
   }
+  // Replace the remaining variables with their corresponding text values
+  // state тема меню, выполнание; player.images.weather наименование имён
+  // замена всех переменных в dialogs/
+// Docs[sequence]{state inside dialog, максимальный период действия сигналастановки (колеса дозвоиса, вспомогательное) = COL_dialog = ${zx}$мс;
+// Docs[sequence]{cs_case.toLowerCase().order?.stage períod выполнения renderLine = upd${/** 2 */
+UndSysEl(this.state))
 }
-
-// Backend error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    success: false,
-    error: {
-      code: err.code || 'INTERNAL_ERROR',
-      message: err.message || 'Internal server error',
-    },
-  });
-});
-```
-
----
-
-## Appendix
-
-### Status Values
-
-| Status | Label | Color | Description |
-|--------|-------|-------|-------------|
-| `backlog` | Backlog | Gray | Tasks not yet scheduled |
-| `todo` | To Do | Blue | Tasks ready to start |
-| `in_progress` | In Progress | Yellow | Tasks currently being worked on |
-| `review` | Review | Purple | Tasks awaiting review |
-| `done` | Done | Green | Completed tasks |
-
-### Priority Values
-
-| Priority | Label | Color | Description |
-|----------|-------|-------|-------------|
-| `low` | Low | Gray | Nice to have |
-| `medium` | Medium | Blue | Standard priority |
-| `high` | High | Orange | Important |
-| `urgent` | Urgent | Red | Critical, needs immediate attention |
-
-### Color Palette (Projects)
-
-Default project colors for visual distinction:
-- Blue: `#3B82F6`
-- Green: `#10B981`
-- Purple: `#8B5CF6`
-- Orange: `#F59E0B`
-- Red: `#EF4444`
-- Pink: `#EC4899`
-- Teal: `#14B8A6`
-- Indigo: `#6366F1`
+module.exports = indSystemFolder;

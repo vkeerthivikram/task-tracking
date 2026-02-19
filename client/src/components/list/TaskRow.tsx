@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Pencil, Trash2, Calendar, AlertCircle, Users } from 'lucide-react';
+import { Pencil, Trash2, Calendar, AlertCircle, Users, GitBranch } from 'lucide-react';
 import type { Task } from '../../types';
 import { StatusBadge, PriorityBadge, TagBadge } from '../common/Badge';
 import { Button } from '../common/Button';
+import { MiniProgressBar } from '../common/ProgressBar';
 
 interface TaskRowProps {
   task: Task;
@@ -63,6 +64,12 @@ export function TaskRow({ task, onEdit, onDelete, isOverdue }: TaskRowProps) {
   // Get first few tags (max 2 visible)
   const visibleTags = task.tags?.slice(0, 2) || [];
   const remainingTagCount = (task.tags?.length || 0) - visibleTags.length;
+  
+  // Check if task has progress
+  const hasProgress = task.progress_percent !== undefined && task.progress_percent > 0;
+  
+  // Check if task is a subtask
+  const isSubtask = task.parent_task_id !== undefined && task.parent_task_id !== null;
 
   return (
     <tr
@@ -87,17 +94,22 @@ export function TaskRow({ task, onEdit, onDelete, isOverdue }: TaskRowProps) {
       <td className="px-4 py-3">
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <p
-              className={twMerge(
-                clsx(
-                  'text-sm font-medium text-gray-900 dark:text-gray-100',
-                  'truncate',
-                  task.status === 'done' && 'line-through text-gray-500 dark:text-gray-400'
-                )
+            <div className="flex items-center gap-2">
+              {isSubtask && (
+                <GitBranch className="w-3 h-3 text-gray-400 dark:text-gray-500 flex-shrink-0" aria-hidden="true" />
               )}
-            >
-              {task.title}
-            </p>
+              <p
+                className={twMerge(
+                  clsx(
+                    'text-sm font-medium text-gray-900 dark:text-gray-100',
+                    'truncate',
+                    task.status === 'done' && 'line-through text-gray-500 dark:text-gray-400'
+                  )
+                )}
+              >
+                {task.title}
+              </p>
+            </div>
             {task.description && (
               <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate max-w-md">
                 {task.description}
@@ -115,6 +127,20 @@ export function TaskRow({ task, onEdit, onDelete, isOverdue }: TaskRowProps) {
       {/* Priority */}
       <td className="px-4 py-3">
         <PriorityBadge priority={task.priority} size="sm" />
+      </td>
+
+      {/* Progress */}
+      <td className="px-4 py-3">
+        {hasProgress ? (
+          <div className="flex items-center gap-2 min-w-[80px]">
+            <MiniProgressBar percent={task.progress_percent!} />
+            <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+              {task.progress_percent}%
+            </span>
+          </div>
+        ) : (
+          <span className="text-sm text-gray-400 dark:text-gray-500">-</span>
+        )}
       </td>
 
       {/* Assignee */}
