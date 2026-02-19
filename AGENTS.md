@@ -27,7 +27,7 @@
 - **Inspiration**: Similar to Jira but simplified for personal use
 - **Architecture**: Full-stack with Express backend and React frontend
 - **Database**: SQLite for local-first data storage
-- **Version**: v1.6.0
+- **Version**: v1.7.0
 
 ### Key Features
 
@@ -41,6 +41,7 @@
 - **Project Assignments**: Project owner and team members with roles (v1.3.0)
 - **Custom Fields**: User-defined fields on tasks with 7 types (v1.6.0)
 - **Saved Views**: Save and recall filter configurations per view (v1.6.0)
+- **Import/Export**: Full database backup and restore with JSON or SQLite (v1.7.0)
 - **Multiple Views**: 6 views (Dashboard, Kanban, List, Calendar, Timeline, People)
 
 ### AI Collaboration Model
@@ -50,6 +51,92 @@ The project was orchestrated through **Orchestrator Mode**, which coordinated mu
 ---
 
 ## Feature Updates
+
+### v1.7.0 - Import/Export & Database Management (2026-02-19)
+
+This update adds full database backup and restore capabilities with JSON and SQLite export options.
+
+#### New Features
+
+| Feature | Description |
+|---------|-------------|
+| **JSON Export** | Export all database tables as a timestamped JSON file download |
+| **SQLite Export** | Download the raw .db file for binary backup |
+| **Import (Merge)** | Import data with merge mode - adds new, updates existing by ID |
+| **Import (Replace)** | Import data with replace mode - clears all existing data first |
+| **Export Status** | View current database statistics (record counts per table) |
+| **Database Gitignore** | Database files excluded from version control |
+
+#### Files Added
+
+| File | Purpose |
+|------|---------|
+| [`server/routes/importExport.js`](server/routes/importExport.js) | Import/export API endpoints |
+| [`client/src/components/common/ImportExportPanel.tsx`](client/src/components/common/ImportExportPanel.tsx) | Import/export UI component |
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| [`.gitignore`](.gitignore) | Added exclusions for *.db, *.db-journal, *.db-wal, *.db-shm |
+| [`server/index.js`](server/index.js) | Registered importExport router |
+| [`client/src/types/index.ts`](client/src/types/index.ts) | Added ImportMode, ExportStatus, ImportPayload, ImportResult types |
+| [`client/src/services/api.ts`](client/src/services/api.ts) | Added exportData, exportSqlite, getExportStatus, importData methods |
+| [`client/src/context/AppContext.tsx`](client/src/context/AppContext.tsx) | Added openImportExportModal function |
+| [`client/src/components/common/CommandPalette.tsx`](client/src/components/common/CommandPalette.tsx) | Added "Export Data" and "Import Data" commands |
+| [`client/src/components/layout/Layout.tsx`](client/src/components/layout/Layout.tsx) | Added ImportExportPanel modal rendering |
+
+#### API Endpoints Added
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/export` | GET | Export all data as JSON file download |
+| `/api/import` | POST | Import data (query: `?mode=merge\|replace`) |
+| `/api/export/sqlite` | GET | Download raw .db file |
+| `/api/export/status` | GET | Get database statistics |
+
+#### TypeScript Types Added
+
+```typescript
+export type ImportMode = 'merge' | 'replace';
+
+export interface ExportStatus {
+  version: string;
+  tableStats: Record<string, number>;
+  totalRecords: number;
+  supportedTables: string[];
+}
+
+export interface ImportPayload {
+  version: string;
+  exportedAt: string;
+  data: Record<string, any[]>;
+}
+
+export interface ImportResult {
+  mode: string;
+  summary: Record<string, { imported: number; skipped: number; errors: number }>;
+  totals: { imported: number; skipped: number; errors: number };
+  importedAt: string;
+}
+```
+
+#### How to Use
+
+1. Open Command Palette (Cmd/Ctrl+K)
+2. Type "Export Data" or "Import Data"
+3. In the Data Management modal:
+   - **Export**: Click "Export Data" for JSON or "Export Database" for SQLite
+   - **Import**: Drag-and-drop JSON file, preview records, select mode, confirm
+
+#### Agents Used for v1.7.0
+
+| Mode | Task | Files Created/Modified |
+|------|------|------------------------|
+| **Code** | Backend Implementation | [`.gitignore`](.gitignore), [`server/routes/importExport.js`](server/routes/importExport.js), [`server/index.js`](server/index.js) |
+| **Frontend Specialist** | Frontend Implementation | [`client/src/types/index.ts`](client/src/types/index.ts), [`client/src/services/api.ts`](client/src/services/api.ts), [`client/src/context/AppContext.tsx`](client/src/context/AppContext.tsx), [`client/src/components/common/ImportExportPanel.tsx`](client/src/components/common/ImportExportPanel.tsx), [`client/src/components/common/CommandPalette.tsx`](client/src/components/common/CommandPalette.tsx), [`client/src/components/layout/Layout.tsx`](client/src/components/layout/Layout.tsx) |
+
+---
 
 ### v1.6.0 - Custom Fields & Saved Views (2026-02-19)
 
@@ -385,7 +472,6 @@ CREATE INDEX IF NOT EXISTS idx_notes_created_by ON notes(created_by);
 |----------|--------|-------------|
 | `/api/notes` | GET | List notes (query: `entity_type`, `entity_id`) |
 | `/api/notes/:id` | GET | Get single note |
-| `/api/notes` | POST | Create note |
 | `/api/notes/:id` | PUT | Update note |
 | `/api/notes/:id` | DELETE | Delete note |
 | `/api/projects/root` | GET | Get root projects |
@@ -460,7 +546,7 @@ This update adds contact management and task assignment capabilities to TaskFlow
 |------|------|------------------------|
 | **Architect** | Schema Design | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
 | **Code** | Backend Implementation | [`server/db/schema.js`](server/db/schema.js), [`server/db/seed.js`](server/db/seed.js), [`server/routes/people.js`](server/routes/people.js), [`server/routes/tags.js`](server/routes/tags.js), [`server/routes/tasks.js`](server/routes/tasks.js), [`server/index.js`](server/index.js) |
-| **Frontend Specialist** | Frontend Implementation | [`client/src/types/index.ts`](client/src/types/index.ts), [`client/src/services/api.ts`](client/src/services/api.ts), [`client/src/context/PeopleContext.tsx`](client/src/context/PeopleContext.tsx), [`client/src/context/TagContext.tsx`](client/src/context/TagContext.tsx), [`client/src/context/TaskContext.tsx`](client/src/context/TaskContext.tsx), [`client/src/components/people/PeopleView.tsx`](client/src/components/people/PeopleView.tsx), [`client/src/components/common/PersonForm.tsx`](client/src/components/common/PersonForm.tsx), [`client/src/components/common/TagForm.tsx`](client/src/components/common/TagForm.tsx), [`client/src/components/common/TaskForm.tsx`](client/src/components/common/TaskForm.tsx), [`client/src/components/common/Badge.tsx`](client/src/components/common/Badge.tsx), [`client/src/components/kanban/TaskCard.tsx`](client/src/components/kanban/TaskCard.tsx), [`client/src/components/list/TaskRow.tsx`](client/src/components/list/TaskRow.tsx), [`client/src/components/list/ListView.tsx`](client/src/components/list/ListView.tsx), [`client/src/components/list/FilterBar.tsx`](client/src/components/list/FilterBar.tsx), [`client/src/components/layout/Sidebar.tsx`](client/src/components/layout/Sidebar.tsx), [`client/src/App.tsx`](client/src/App.tsx) |
+| **Frontend Specialist** | Frontend Implementation | [`client/src/types/index.ts`](client/src/types/index.ts), [`client/src/services/api.ts`](client/src/services/api.ts), [`client/src/context/PeopleContext.tsx`](client/src/context/PeopleContext.tsx), [`client/src/context/TagContext.tsx`](client/src/context/TagContext.tsx), [`client/src/context/TaskContext.tsx`](client/src/context/TaskContext.tsx), [`client/src/components/people/PeopleView.tsx`](client/src/components/people/PeopleView.tsx), [`client/src/components/common/PersonForm.tsx`](client/src/components/common/PersonForm.tsx), [`client/src/components/common/TagForm.tsx`](client/src/components/common/TagForm.tsx), [`client/src/components/common/TaskForm.tsx`](client/src/components/common/TaskForm.tsx), [`client/src/components/kanban/TaskCard.tsx`](client/src/components/kanban/TaskCard.tsx), [`client/src/components/list/FilterBar.tsx`](client/src/components/list/FilterBar.tsx), [`client/src/components/layout/Sidebar.tsx`](client/src/components/layout/Sidebar.tsx), [`client/src/App.tsx`](client/src/App.tsx) |
 | **Documentation Specialist** | Documentation Update | [`README.md`](README.md) |
 
 #### Database Changes
@@ -495,7 +581,7 @@ CREATE TABLE task_assignees (
     id TEXT PRIMARY KEY,
     task_id TEXT NOT NULL,
     person_id TEXT NOT NULL,
-    role TEXT DEFAULT 'collaborator',
+    role TEXT DEFAULT 'collaborator', CHECK (role IN ('collaborator', 'reviewer', 'observer')),
     created_at DATETIME,
     FOREIGN KEY (task_id) REFERENCES tasks(id),
     FOREIGN KEY (person_id) REFERENCES people(id)

@@ -6,6 +6,7 @@ import { Sidebar } from './Sidebar';
 import { Modal } from '../common/Modal';
 import { ProjectForm } from '../common/ProjectForm';
 import { TaskForm } from '../common/TaskForm';
+import { ImportExportPanel } from '../common/ImportExportPanel';
 import { useApp } from '../../context/AppContext';
 import { useProjects } from '../../context/ProjectContext';
 import { useTasks } from '../../context/TaskContext';
@@ -56,11 +57,6 @@ export function Layout({ children }: LayoutProps) {
     }
   }, [modal.data, createTask, updateTask, closeModal]);
   
-  // Open add task modal
-  const handleAddTask = useCallback(() => {
-    openTaskModal();
-  }, [openTaskModal]);
-  
   // Open add project modal
   const handleAddProject = useCallback(() => {
     openProjectModal();
@@ -74,7 +70,7 @@ export function Layout({ children }: LayoutProps) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <Header onAddTask={handleAddTask} onAddProject={handleAddProject} />
+        <Header />
         
         {/* Page Content */}
         <main className="flex-1 overflow-auto p-4 md:p-6">
@@ -112,6 +108,16 @@ export function Layout({ children }: LayoutProps) {
           onCancel={closeModal}
           isLoading={isSubmitting}
         />
+      </Modal>
+      
+      {/* Import/Export Modal */}
+      <Modal
+        isOpen={modal.isOpen && modal.type === 'importExport'}
+        onClose={closeModal}
+        title="Data Management"
+        size="lg"
+      >
+        <ImportExportPanel onClose={closeModal} />
       </Modal>
     </div>
   );

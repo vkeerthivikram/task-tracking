@@ -289,7 +289,7 @@ export interface DashboardStats {
 // Modal State
 export interface ModalState {
   isOpen: boolean;
-  type: 'task' | 'project' | 'confirm' | null;
+  type: 'task' | 'project' | 'confirm' | 'importExport' | null;
   data?: Task | Project | null;
 }
 
@@ -443,4 +443,49 @@ export interface UpdateSavedViewDTO {
   sort_by?: string;
   sort_order?: 'asc' | 'desc';
   is_default?: boolean;
+}
+
+// ==================== v1.7.0 Import/Export ====================
+
+// Import mode type
+export type ImportMode = 'merge' | 'replace';
+
+// Export status response
+export interface ExportStatus {
+  version: string;
+  tableStats: Record<string, number>;
+  totalRecords: number;
+  supportedTables: string[];
+}
+
+// Import payload structure
+export interface ImportPayload {
+  version: string;
+  exportedAt: string;
+  data: Record<string, unknown[]>;
+}
+
+// Import summary per table
+export interface ImportTableSummary {
+  imported: number;
+  skipped: number;
+  errors: number;
+}
+
+// Import result response
+export interface ImportResult {
+  mode: ImportMode;
+  summary: Record<string, ImportTableSummary>;
+  totals: {
+    imported: number;
+    skipped: number;
+    errors: number;
+  };
+  importedAt: string;
+  errorDetails?: Array<{
+    table: string;
+    id: string;
+    error: string;
+  }>;
+  totalErrors?: number;
 }

@@ -20,6 +20,7 @@ interface AppContextType {
   openTaskModal: (task?: Task) => void;
   openProjectModal: (project?: Project) => void;
   openConfirmModal: (data: unknown) => void;
+  openImportExportModal: () => void;
   closeModal: () => void;
   
   // Theme
@@ -97,6 +98,14 @@ export function AppProvider({ children }: AppProviderProps) {
     });
   }, []);
   
+  const openImportExportModal = useCallback(() => {
+    setModal({
+      isOpen: true,
+      type: 'importExport',
+      data: null,
+    });
+  }, []);
+  
   const closeModal = useCallback(() => {
     setModal({
       isOpen: false,
@@ -117,6 +126,7 @@ export function AppProvider({ children }: AppProviderProps) {
     openTaskModal,
     openProjectModal,
     openConfirmModal,
+    openImportExportModal,
     closeModal,
     darkMode,
     toggleDarkMode,

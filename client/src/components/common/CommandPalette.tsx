@@ -119,9 +119,15 @@ const SearchIcon = () => (
   </svg>
 );
 
+const DataIcon = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+  </svg>
+);
+
 export function CommandPalette() {
   const { isOpen, closePalette } = useCommandPalette();
-  const { setCurrentView, openTaskModal, openProjectModal } = useApp();
+  const { setCurrentView, openTaskModal, openProjectModal, openImportExportModal } = useApp();
   const { projects, selectProject } = useProjectSelection();
   const { tasks } = useTasks();
   const { people } = usePeople();
@@ -256,8 +262,33 @@ export function CommandPalette() {
       },
     });
     
+    // Data management commands
+    commands.push({
+      id: 'action-export-data',
+      type: 'action',
+      label: 'Export Data',
+      sublabel: 'Download backup as JSON or SQLite',
+      icon: <DataIcon />,
+      action: () => {
+        openImportExportModal();
+        closePalette();
+      },
+    });
+    
+    commands.push({
+      id: 'action-import-data',
+      type: 'action',
+      label: 'Import Data',
+      sublabel: 'Restore from backup file',
+      icon: <DataIcon />,
+      action: () => {
+        openImportExportModal();
+        closePalette();
+      },
+    });
+    
     return commands;
-  }, [tasks, projects, people, setCurrentView, selectProject, closePalette, openTaskModal, openProjectModal]);
+  }, [tasks, projects, people, setCurrentView, selectProject, closePalette, openTaskModal, openProjectModal, openImportExportModal]);
   
   // Filter commands based on query
   const filteredCommands = useMemo(() => {

@@ -35,6 +35,10 @@ import type {
   SavedView,
   CreateSavedViewDTO,
   UpdateSavedViewDTO,
+  ExportStatus,
+  ImportPayload,
+  ImportResult,
+  ImportMode,
 } from '../types';
 
 const API_BASE_URL = '/api';
@@ -656,6 +660,99 @@ export async function setDefaultView(id: string): Promise<SavedView> {
   return handleResponse<SavedView>(response);
 }
 
+// ============ Import/Export API ============
+
+/**
+ * Export all data as JSON (triggers file download)
+ */
+export async function exportData(): Promise<void> {
+  // Create a temporary anchor element to trigger download
+  const response = await fetch(`${API_BASE_URL}/export`);
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: { message: 'Export failed' } }));
+    throw new Error(error.error?.message || `HTTP error! status: ${response.status}`);
+  }
+  
+  // Get the blob from response
+  const blob = await response.blob();
+  
+  // Extract filename from Content-Disposition header
+  const contentDisposition = response.headers.get('Content-Disposition');
+  let filename = 'taskflow-export.json';
+  if (contentDisposition) {
+    const filenameMatch = contentDisposition.match(/filename="?(.+?)"?(?:;|$)/);
+    if (filenameMatch) {
+      filename = filenameMatch[1];
+    }
+  }
+  
+  // Create download link and trigger download
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Export SQLite database file (triggers file download)
+ */
+export async function exportSqlite(): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/export/sqlite`);
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: { message: 'SQLite export failed' } }));
+    throw new Error(error.error?.message || `HTTP error! status: ${response.status}`);
+  }
+  
+  const blob = await response.blob();
+  
+  // Extract filename from Content-Disposition header
+  const contentDisposition = response.headers.get('Content-Disposition');
+  let filename = 'taskflow-backup.db';
+  if (contentDisposition) {
+    const filenameMatch = contentDisposition.match(/filename="?(.+?)"?(?:;|$)/);
+    if (filenameMatch) {
+      filename = filenameMatch[1];
+    }
+  }
+  
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Get export status and database statistics
+ */
+export async function getExportStatus(): Promise<ExportStatus> {
+  const response = await fetch(`${API_BASE_URL}/export/status`);
+  return handleResponse<ExportStatus>(response);
+}
+
+/**
+ * Import data from JSON
+ */
+export async function importData(data: ImportPayload, mode: ImportMode): Promise<ImportResult> {
+  const response = await fetch(`${API_BASE_URL}/import?mode=${mode}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<ImportResult>(response);
+}
+
 // Export all functions as a unified API object
 export const api = {
   projects: {
@@ -739,6 +836,12 @@ export const api = {
     update: updateSavedView,
     delete: deleteSavedView,
     setDefault: setDefaultView,
+  },
+  importExport: {
+    exportData,
+    exportSqlite,
+    getExportStatus,
+    importData,
   },
 };
 
