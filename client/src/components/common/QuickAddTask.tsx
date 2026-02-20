@@ -15,7 +15,7 @@ import {
 import { useTasks } from '../../context/TaskContext';
 import { useProjects } from '../../context/ProjectContext';
 import { useToast } from '../../context/ToastContext';
-import { useShortcuts } from '../../context/ShortcutContext';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { TaskPriority, Project } from '../../types';
 
 interface QuickAddTaskProps {
@@ -45,32 +45,26 @@ export function QuickAddTask({ className }: QuickAddTaskProps) {
   
   const { createTask } = useTasks();
   const { projects, currentProject } = useProjects();
-  const { showToast } = useToast();
-  const { registerShortcut, unregisterShortcut } = useShortcuts();
+  const { success: toastSuccess, error: toastError, warning: toastWarning } = useToast();
   
   // Get the effective project ID (selected or current)
   const effectiveProjectId = selectedProjectId || currentProject?.id;
   const selectedProject = projects.find(p => p.id === effectiveProjectId);
   
   // Register keyboard shortcut 'n' to focus input
-  useEffect(() => {
-    const shortcutId = 'quick-add-task-focus';
-    registerShortcut({
-      id: shortcutId,
-      key: 'n',
-      description: 'Focus quick add task input',
-      category: 'Tasks',
-      action: () => {
-        if (inputRef.current) {
-          inputRef.current.focus();
-        }
+  useKeyboardShortcuts({
+    shortcuts: [
+      {
+        key: 'n',
+        action: () => {
+          if (inputRef.current) {
+            inputRef.current.focus();
+          }
+        },
+        description: 'Focus quick add task input',
       },
-    });
-    
-    return () => {
-      unregisterShortcut(shortcutId);
-    };
-  }, [registerShortcut, unregisterShortcut]);
+    ],
+  });
   
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -91,12 +85,12 @@ export function QuickAddTask({ className }: QuickAddTaskProps) {
     e?.preventDefault();
     
     if (!title.trim()) {
-      showToast('Please enter a task title', 'warning');
+      toastWarning('Please enter a task title');
       return;
     }
     
     if (!effectiveProjectId) {
-      showToast('Please select a project first', 'warning');
+      toastWarning('Please select a project first');
       return;
     }
     
@@ -105,24 +99,24 @@ export function QuickAddTask({ className }: QuickAddTaskProps) {
     try {
       await createTask({
         title: title.trim(),
-        project_id: effectiveProjectId,
+        project_id: Number(effectiveProjectId),
         status: 'todo',
         priority,
         due_date: dueDate || undefined,
       });
       
-      showToast('Task created successfully', 'success');
+      toastSuccess('Task created successfully');
       setTitle('');
       setDueDate('');
       setPriority('medium');
       setIsExpanded(false);
     } catch (error) {
-      showToast('Failed to create task', 'error');
+      toastError('Failed to create task');
       console.error('Failed to create task:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [title, effectiveProjectId, priority, dueDate, createTask, showToast]);
+  }, [title, effectiveProjectId, priority, dueDate, createTask, toastSuccess, toastError, toastWarning]);
   
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -234,7 +228,7 @@ export function QuickAddTask({ className }: QuickAddTaskProps) {
                       role="option"
                       aria-selected={effectiveProjectId === project.id}
                       onClick={() => {
-                        setSelectedProjectId(project.id);
+                        setSelectedProjectId(String(project.id));
                         setShowProjectDropdown(false);
                       }}
                       className={twMerge(

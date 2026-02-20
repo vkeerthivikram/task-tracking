@@ -3,7 +3,7 @@
 import React, { useState, useCallback, ReactNode } from 'react';
 import type { TreeNode } from '../../types';
 
-interface TreeViewProps<T> {
+interface TreeViewProps<T extends object> {
   nodes: TreeNode<T>[];
   renderNode: (node: TreeNode<T>, depth: number, isExpanded: boolean, onToggle: () => void) => ReactNode;
   defaultExpanded?: boolean;
@@ -12,7 +12,7 @@ interface TreeViewProps<T> {
   className?: string;
 }
 
-function TreeViewInner<T>({
+function TreeViewInner<T extends object>({
   nodes,
   renderNode,
   defaultExpanded = false,
@@ -89,7 +89,7 @@ function TreeViewInner<T>({
 }
 
 // Export with generic support
-export function TreeView<T>(props: TreeViewProps<T>) {
+export function TreeView<T extends object>(props: TreeViewProps<T>) {
   return <TreeViewInner<T> {...props} />;
 }
 

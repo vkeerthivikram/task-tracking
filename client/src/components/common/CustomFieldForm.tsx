@@ -331,7 +331,7 @@ export default function CustomFieldForm({
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" loading={loading}>
+          <Button type="submit" variant="primary" isLoading={loading}>
             {isEditing ? 'Update Field' : 'Create Field'}
           </Button>
         </div>

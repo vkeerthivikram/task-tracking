@@ -40,7 +40,7 @@ export function NoteEditor({
         // Create new note
         await onSave({
           entity_type: entityType,
-          entity_id: entityId,
+          entity_id: parseInt(entityId, 10),
           content: content.trim(),
         } as CreateNoteDTO);
       }

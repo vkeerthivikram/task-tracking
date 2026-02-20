@@ -73,7 +73,7 @@ This application is a **local-first, single-user** project management tool desig
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `eslint-config-next` | ^14.0.4 | Next.js ESLint config (replaces Vite/React eslint plugins) |
+| `eslint-config-next` | ^15.2.9 | Next.js ESLint config (replaces Vite/React eslint plugins) |
 | `@types/react` | ^18.2.0 | React TypeScript types |
 | `typescript` | ^5.3.0 | TypeScript compiler |
 | `eslint` | ^8.55.0 | Code linting |

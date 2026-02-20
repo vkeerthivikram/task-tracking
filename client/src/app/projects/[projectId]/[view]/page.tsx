@@ -21,7 +21,10 @@ export default function ProjectViewPage() {
   const { projects, loading, currentProject, setCurrentProjectById } = useProjects();
 
   const projectId = params?.projectId ? parseInt(params.projectId, 10) : null;
-  const view = params?.view as ViewType;
+  // Normalize view: fall back to 'kanban' if the URL segment is not a valid view
+  const view: ViewType = VALID_VIEWS.includes(params?.view as ViewType)
+    ? (params?.view as ViewType)
+    : 'kanban';
 
   // Sync project from URL
   useEffect(() => {
