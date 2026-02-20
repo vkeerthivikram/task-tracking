@@ -1,6 +1,6 @@
 # TaskFlow Product Roadmap
 
-**Version:** v1.3.0 → Future Releases  
+**Version:** v2.0.0 → Future Releases  
 **Document Date:** February 2026  
 **Status:** Strategic Planning Document
 
@@ -30,18 +30,46 @@ This roadmap synthesizes findings from two comprehensive audits:
 - **UX Audit** - Evaluating user experience maturity and pain points
 - **Product Strategy & Competitive Audit** - Analyzing market position and feature gaps
 
-The document provides a prioritized, actionable development plan for TaskFlow's evolution from v1.3.0 through v2.1.0+.
+The document provides a prioritized, actionable development plan for TaskFlow's evolution from v2.0.0 through v2.2.0+.
 
-### 1.2 Current State: TaskFlow v1.3.0
+### 1.2 Current State: TaskFlow v2.0.0
 
 TaskFlow is a **local-first, single-user project management tool** positioned as a simplified Jira alternative. Built entirely through AI agent collaboration, it demonstrates a unique development approach while delivering production-ready functionality.
 
 | Aspect | Status |
 |--------|--------|
-| **Architecture** | Full-stack (Express + React + SQLite) |
+| **Architecture** | Full-stack (Express + Next.js 15 + SQLite) |
+| **UI Framework** | shadcn/ui with Radix UI primitives |
 | **Core Features** | 6 views, infinite nesting, progress tracking, notes, assignments |
 | **Differentiator** | Local-first with offline capability |
 | **Maturity Level** | Feature-complete for single-user personal PM |
+
+#### v2.0.0 - Next.js & shadcn/ui Migration (Completed: February 2026)
+
+The v2.0.0 release represents a major frontend architecture modernization:
+
+| Migration Item | Previous | Current |
+|---------------|----------|---------|
+| **Framework** | Vite + React SPA | Next.js 15 with App Router |
+| **Routing** | react-router-dom | File-based routing (`app/` directory) |
+| **UI Components** | Custom components | shadcn/ui (Badge, Button, Card, Dialog, DropdownMenu) |
+| **Styling** | Custom CSS | Tailwind CSS with CSS variables |
+| **API Handling** | Direct fetch | Next.js API rewrites/proxying |
+
+**Key Files Created:**
+- [`client/src/app/layout.tsx`](client/src/app/layout.tsx) - Root layout with providers
+- [`client/src/app/providers.tsx`](client/src/app/providers.tsx) - Context providers wrapper
+- [`client/src/app/global-ui.tsx`](client/src/app/global-ui.tsx) - Global UI elements
+- [`client/src/components/ui/`](client/src/components/ui/) - shadcn/ui components
+
+**Key Files Modified:**
+- [`client/package.json`](client/package.json) - Updated for Next.js dependencies
+- [`client/tsconfig.json`](client/tsconfig.json) - Updated for Next.js configuration
+
+**Key Files Removed:**
+- `client/vite.config.ts` - Replaced by Next.js configuration
+- `client/index.html` - Next.js handles HTML generation
+- `client/src/main.tsx` - Replaced by App Router entry points
 
 ### 1.3 Key Audit Findings Summary
 
@@ -426,22 +454,81 @@ Strategic investments requiring platform-level changes.
 gantt
     title TaskFlow Release Timeline
     dateFormat  YYYY-MM-DD
-    section v1.4.0
-    Quick Wins Implementation    :a1, 2026-03-01, 21d
-    Accessibility Fixes          :a2, after a1, 14d
-    section v1.5.0
-    Core PM Features             :b1, 2026-04-01, 42d
-    Time Tracking                :b2, after b1, 14d
     section v2.0.0
-    Collaboration Foundation     :c1, 2026-06-01, 56d
-    Real-time Features           :c2, after c1, 28d
-    section v2.1.0+
-    Mobile & AI                  :d1, 2026-09-01, 84d
+    Next.js & shadcn/ui Migration  :a1, 2026-02-01, 20d
+    section v2.1.0
+    Foundation Strengthening       :b1, 2026-03-01, 21d
+    Accessibility Fixes            :b2, after b1, 14d
+    section v2.2.0
+    Core PM Features               :c1, 2026-04-01, 42d
+    Time Tracking                  :c2, after c1, 14d
+    section v2.3.0
+    Collaboration Foundation       :d1, 2026-06-01, 56d
+    Real-time Features             :d2, after d1, 28d
+    section v2.4.0+
+    Mobile & AI                    :e1, 2026-09-01, 84d
 ```
+
+#### Release Status Summary
+
+| Version | Theme | Status | Completion Date |
+|---------|-------|--------|-----------------|
+| **v2.0.0** | Next.js & shadcn/ui Migration | ✅ **Completed** | February 2026 |
+| **v2.1.0** | Foundation Strengthening | 📋 Planned | Q2 2026 |
+| **v2.2.0** | Core PM Capabilities | 📋 Planned | Q2-Q3 2026 |
+| **v2.3.0** | Collaboration Ready | 📋 Planned | Q3 2026 |
+| **v2.4.0+** | Intelligence & Ecosystem | 📋 Planned | Q4 2026+ |
 
 ---
 
-### 4.2 v1.4.0 - Foundation Strengthening
+### 4.2 v2.0.0 - Next.js & shadcn/ui Migration
+
+**Release Theme:** Frontend Architecture Modernization  
+**Timeline:** 3 weeks  
+**Status:** ✅ **Completed** (February 2026)
+
+#### Goals
+- Migrate from Vite + React SPA to Next.js 15 with App Router
+- Replace custom UI components with shadcn/ui for better accessibility
+- Enable file-based routing with dynamic routes
+- Configure API proxying for seamless backend integration
+
+#### Completed Features
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Next.js 15 App Router | ✅ Completed | File-based routing with `app/` directory |
+| shadcn/ui Badge | ✅ Completed | [`client/src/components/ui/badge.tsx`](client/src/components/ui/badge.tsx) |
+| shadcn/ui Button | ✅ Completed | [`client/src/components/ui/button.tsx`](client/src/components/ui/button.tsx) |
+| shadcn/ui Card | ✅ Completed | [`client/src/components/ui/card.tsx`](client/src/components/ui/card.tsx) |
+| shadcn/ui Dialog | ✅ Completed | [`client/src/components/ui/dialog.tsx`](client/src/components/ui/dialog.tsx) |
+| shadcn/ui DropdownMenu | ✅ Completed | [`client/src/components/ui/dropdown-menu.tsx`](client/src/components/ui/dropdown-menu.tsx) |
+| API Proxying | ✅ Completed | Next.js rewrites to Express backend |
+| Context Providers Migration | ✅ Completed | [`client/src/app/providers.tsx`](client/src/app/providers.tsx) |
+| Global UI Components | ✅ Completed | [`client/src/app/global-ui.tsx`](client/src/app/global-ui.tsx) |
+| Tailwind CSS Configuration | ✅ Completed | [`client/tailwind.config.js`](client/tailwind.config.js) |
+
+#### Architecture Changes
+
+**New Dependencies:**
+- `next` ^15.5.12
+- `@radix-ui/react-dialog`, `@radix-ui/react-dropdown-menu`, `@radix-ui/react-select`, `@radix-ui/react-slot`
+- `class-variance-authority`, `clsx`, `tailwind-merge`, `tailwindcss-animate`
+
+**Removed Dependencies:**
+- `react-router-dom` (replaced by Next.js App Router)
+- `vite`, `@vitejs/plugin-react` (replaced by Next.js build system)
+
+#### Success Criteria
+- [x] Next.js application running with App Router
+- [x] All routes migrated (`/`, `/projects/[projectId]/[view]`, `/people`)
+- [x] shadcn/ui components integrated
+- [x] API proxying functional
+- [x] Context providers working with Server/Client Components
+
+---
+
+### 4.3 v2.1.0 - Foundation Strengthening
 
 **Release Theme:** UX Polish & Data Portability  
 **Timeline:** 4-6 weeks  
@@ -497,7 +584,7 @@ CREATE TABLE user_preferences (
 
 ---
 
-### 4.3 v1.5.0 - Core PM Capabilities
+### 4.4 v2.2.0 - Core PM Capabilities
 
 **Release Theme:** Project Management Power Features  
 **Timeline:** 6-8 weeks  
@@ -625,7 +712,7 @@ CREATE TABLE saved_filters (
 
 ---
 
-### 4.4 v2.0.0 - Collaboration Ready
+### 4.5 v2.3.0 - Collaboration Ready
 
 **Release Theme:** Team Features Foundation  
 **Timeline:** 8-12 weeks  
@@ -711,7 +798,7 @@ CREATE TABLE notifications (
 
 ---
 
-### 4.5 v2.1.0+ - Intelligence & Ecosystem
+### 4.6 v2.4.0+ - Intelligence & Ecosystem
 
 **Release Theme:** Smart Features & Integrations  
 **Timeline:** 12+ weeks  
@@ -795,7 +882,7 @@ Calculated as: `(User Impact × 2) + (Competitive Necessity × 1.5) - (Complexit
 
 #### Adoption Metrics
 
-| Metric | Current Baseline | v1.4.0 Target | v1.5.0 Target | v2.0.0 Target |
+| Metric | Current Baseline | v2.1.0 Target | v2.2.0 Target | v2.3.0 Target |
 |--------|------------------|---------------|---------------|---------------|
 | First-time user activation | ~40% | 70% | 80% | 85% |
 | Onboarding completion rate | N/A | 80% | 85% | 90% |
@@ -804,7 +891,7 @@ Calculated as: `(User Impact × 2) + (Competitive Necessity × 1.5) - (Complexit
 
 #### UX Metrics
 
-| Metric | Current Baseline | v1.4.0 Target | v1.5.0 Target | v2.0.0 Target |
+| Metric | Current Baseline | v2.1.0 Target | v2.2.0 Target | v2.3.0 Target |
 |--------|------------------|---------------|---------------|---------------|
 | Overall UX Score | 6.5/10 | 8.0/10 | 8.5/10 | 9.0/10 |
 | Accessibility Score | 6/10 | 8/10 | 8.5/10 | 9/10 (WCAG AA) |
@@ -813,7 +900,7 @@ Calculated as: `(User Impact × 2) + (Competitive Necessity × 1.5) - (Complexit
 
 #### Performance Metrics
 
-| Metric | Current Baseline | v1.4.0 Target | v1.5.0 Target | v2.0.0 Target |
+| Metric | Current Baseline | v2.1.0 Target | v2.2.0 Target | v2.3.0 Target |
 |--------|------------------|---------------|---------------|---------------|
 | Initial load time | ~2s | <1.5s | <1.5s | <1s |
 | Task save latency | ~200ms | <150ms | <100ms | <50ms |
@@ -821,7 +908,7 @@ Calculated as: `(User Impact × 2) + (Competitive Necessity × 1.5) - (Complexit
 
 #### Feature Usage Metrics
 
-| Metric | Current Baseline | v1.4.0 Target | v1.5.0 Target | v2.0.0 Target |
+| Metric | Current Baseline | v2.1.0 Target | v2.2.0 Target | v2.3.0 Target |
 |--------|------------------|---------------|---------------|---------------|
 | Keyboard shortcut usage | N/A | 40% of users | 60% of users | 75% of users |
 | Quick-add usage | N/A | 50% of tasks | 60% of tasks | 70% of tasks |
@@ -961,10 +1048,11 @@ graph TD
 
 | Version | Target Competitor Parity |
 |---------|-------------------------|
-| v1.4.0 | Basic parity with Todoist (shortcuts, quick add, dark mode) |
-| v1.5.0 | Core parity with Linear (dependencies, time tracking, templates) |
-| v2.0.0 | Collaboration parity with Notion (comments, real-time, API) |
-| v2.1.0+ | Innovation parity (mobile, AI, automation) |
+| v2.0.0 | ✅ **Completed** - Modern frontend stack (Next.js, shadcn/ui, Tailwind) |
+| v2.1.0 | Basic parity with Todoist (shortcuts, quick add, dark mode) |
+| v2.2.0 | Core parity with Linear (dependencies, time tracking, templates) |
+| v2.3.0 | Collaboration parity with Notion (comments, real-time, API) |
+| v2.4.0+ | Innovation parity (mobile, AI, automation) |
 
 ### 8.5 Related Documents
 
@@ -980,6 +1068,7 @@ graph TD
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0.0 | February 2026 | Documentation Specialist | Initial roadmap creation |
+| 2.0.0 | February 2026 | Copilot Agent | Updated to reflect v2.0.0 Next.js & shadcn/ui migration completion; renumbered future releases |
 
 ---
 
