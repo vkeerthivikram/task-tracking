@@ -33,7 +33,7 @@ const columns: Array<{ id: TaskStatus; title: string; color: string }> = [
 
 export const KanbanBoard: React.FC = () => {
   const { filteredTasks, updateTaskStatus } = useTasks();
-  const { openTaskModal } = useApp();
+  const { openTaskModal, openSubTaskModal } = useApp();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [overColumnId, setOverColumnId] = useState<TaskStatus | null>(null);
 
@@ -132,6 +132,10 @@ export const KanbanBoard: React.FC = () => {
     openTaskModal(task);
   };
 
+  const handleCreateSubTask = (parentTaskId: number) => {
+    openSubTaskModal(parentTaskId);
+  };
+
   return (
     <div className="h-full w-full overflow-hidden">
       <DndContext
@@ -162,6 +166,7 @@ export const KanbanBoard: React.FC = () => {
               tasks={tasksByStatus[column.id]}
               projectColor={column.color}
               onTaskClick={handleTaskClick}
+              onCreateSubTask={handleCreateSubTask}
             />
           ))}
         </div>

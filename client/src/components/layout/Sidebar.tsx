@@ -37,7 +37,7 @@ export function Sidebar({ onAddProject }: SidebarProps) {
   const projectId = params?.projectId;
   const router = useRouter();
   const pathname = usePathname();
-  const { sidebarOpen, setSidebarOpen, currentView, setCurrentView, setCurrentProjectId } = useApp();
+  const { sidebarOpen, setSidebarOpen, currentView, setCurrentView, setCurrentProjectId, openSubProjectModal } = useApp();
   const { projects, currentProject, setCurrentProject } = useProjects();
   const { people } = usePeople();
   const sidebarRef = useRef<HTMLElement>(null);
@@ -220,12 +220,20 @@ export function Sidebar({ onAddProject }: SidebarProps) {
               const ownerInitial = owner?.name?.charAt(0)?.toUpperCase() || '?';
               
               return (
-                <button
+                <div
                   key={project.id}
                   onClick={() => handleProjectClick(project)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      handleProjectClick(project);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                   className={twMerge(
                     clsx(
-                      'w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium',
+                      'group w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium',
                       'transition-colors duration-200',
                       currentProject?.id === project.id
                         ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
@@ -250,10 +258,22 @@ export function Sidebar({ onAddProject }: SidebarProps) {
                       </div>
                     </div>
                   )}
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openSubProjectModal(project.id);
+                    }}
+                    className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
+                    aria-label={`Add sub-project under ${project.name}`}
+                    title="Add sub-project"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5" />
+                  </button>
                   {currentProject?.id === project.id && (
                     <ChevronRight className="w-4 h-4 ml-auto text-gray-400" />
                   )}
-                </button>
+                </div>
               );
             })}
           </nav>

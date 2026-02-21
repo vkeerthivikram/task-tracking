@@ -289,8 +289,8 @@ export interface DashboardStats {
 // Modal State
 export interface ModalState {
   isOpen: boolean;
-  type: 'task' | 'project' | 'confirm' | 'importExport' | null;
-  data?: Task | Project | null;
+  type: 'task' | 'project' | 'person' | 'confirm' | 'importExport' | null;
+  data?: Task | Project | Person | null;
 }
 
 // App State

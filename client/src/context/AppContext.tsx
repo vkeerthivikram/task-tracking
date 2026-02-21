@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
-import type { ViewType, ModalState, Task, Project } from '../types';
+import type { ViewType, ModalState, Task, Project, Person } from '../types';
 
 interface AppContextType {
   // View state
@@ -19,8 +19,13 @@ interface AppContextType {
   
   // Modal state
   modal: ModalState;
-  openTaskModal: (task?: Task) => void;
-  openProjectModal: (project?: Project) => void;
+  taskModalParentId: number | null;
+  projectModalParentId: number | null;
+  openTaskModal: (task?: Task, options?: { parentTaskId?: number | null }) => void;
+  openSubTaskModal: (parentTaskId: number) => void;
+  openProjectModal: (project?: Project, options?: { parentProjectId?: number | null }) => void;
+  openSubProjectModal: (parentProjectId: number) => void;
+  openPersonModal: (person?: Person) => void;
   openConfirmModal: (data: unknown) => void;
   openImportExportModal: () => void;
   closeModal: () => void;
@@ -42,6 +47,8 @@ export function AppProvider({ children }: AppProviderProps) {
   const [currentView, setCurrentView] = useState<ViewType>('kanban');
   const [currentProjectId, setCurrentProjectId] = useState<number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [taskModalParentId, setTaskModalParentId] = useState<number | null>(null);
+  const [projectModalParentId, setProjectModalParentId] = useState<number | null>(null);
   const [modal, setModal] = useState<ModalState>({
     isOpen: false,
     type: null,
@@ -88,23 +95,47 @@ export function AppProvider({ children }: AppProviderProps) {
     setDarkMode(prev => !prev);
   }, []);
   
-  const openTaskModal = useCallback((task?: Task) => {
+  const openTaskModal = useCallback((task?: Task, options?: { parentTaskId?: number | null }) => {
+    setTaskModalParentId(options?.parentTaskId ?? null);
+    setProjectModalParentId(null);
     setModal({
       isOpen: true,
       type: 'task',
       data: task,
     });
   }, []);
+
+  const openSubTaskModal = useCallback((parentTaskId: number) => {
+    openTaskModal(undefined, { parentTaskId });
+  }, [openTaskModal]);
   
-  const openProjectModal = useCallback((project?: Project) => {
+  const openProjectModal = useCallback((project?: Project, options?: { parentProjectId?: number | null }) => {
+    setProjectModalParentId(options?.parentProjectId ?? null);
+    setTaskModalParentId(null);
     setModal({
       isOpen: true,
       type: 'project',
       data: project,
     });
   }, []);
+
+  const openSubProjectModal = useCallback((parentProjectId: number) => {
+    openProjectModal(undefined, { parentProjectId });
+  }, [openProjectModal]);
+
+  const openPersonModal = useCallback((person?: Person) => {
+    setTaskModalParentId(null);
+    setProjectModalParentId(null);
+    setModal({
+      isOpen: true,
+      type: 'person',
+      data: person,
+    });
+  }, []);
   
   const openConfirmModal = useCallback((_data?: unknown) => {
+    setTaskModalParentId(null);
+    setProjectModalParentId(null);
     setModal({
       isOpen: true,
       type: 'confirm',
@@ -113,6 +144,8 @@ export function AppProvider({ children }: AppProviderProps) {
   }, []);
   
   const openImportExportModal = useCallback(() => {
+    setTaskModalParentId(null);
+    setProjectModalParentId(null);
     setModal({
       isOpen: true,
       type: 'importExport',
@@ -121,6 +154,8 @@ export function AppProvider({ children }: AppProviderProps) {
   }, []);
   
   const closeModal = useCallback(() => {
+    setTaskModalParentId(null);
+    setProjectModalParentId(null);
     setModal({
       isOpen: false,
       type: null,
@@ -137,8 +172,13 @@ export function AppProvider({ children }: AppProviderProps) {
     toggleSidebar,
     setSidebarOpen,
     modal,
+    taskModalParentId,
+    projectModalParentId,
     openTaskModal,
+    openSubTaskModal,
     openProjectModal,
+    openSubProjectModal,
+    openPersonModal,
     openConfirmModal,
     openImportExportModal,
     closeModal,

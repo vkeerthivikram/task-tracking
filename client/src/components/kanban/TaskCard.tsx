@@ -6,7 +6,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { format } from 'date-fns';
-import { Calendar, Users, GitBranch } from 'lucide-react';
+import { Calendar, Users, GitBranch, Plus } from 'lucide-react';
 import type { Task, TaskPriority } from '../../types';
 import { PriorityBadge, TagBadge } from '../common/Badge';
 import { MiniProgressBar } from '../common/ProgressBar';
@@ -14,6 +14,7 @@ import { MiniProgressBar } from '../common/ProgressBar';
 interface TaskCardProps {
   task: Task;
   onClick?: (task: Task) => void;
+  onCreateSubTask?: (parentTaskId: number) => void;
 }
 
 const priorityColors: Record<TaskPriority, string> = {
@@ -23,7 +24,7 @@ const priorityColors: Record<TaskPriority, string> = {
   urgent: 'bg-red-500',
 };
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, onCreateSubTask }) => {
   const {
     attributes,
     listeners,
@@ -117,6 +118,23 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
 
       {/* Card content */}
       <div className="pl-2">
+        {onCreateSubTask && (
+          <div className="flex justify-end mb-1">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onCreateSubTask(task.id);
+              }}
+              className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-1 rounded text-gray-400 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+              title="Add sub-task"
+              aria-label="Add sub-task"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* Subtask indicator */}
         {isSubtask && (
           <div className="flex items-center gap-1 mb-1 text-xs text-gray-400 dark:text-gray-500">

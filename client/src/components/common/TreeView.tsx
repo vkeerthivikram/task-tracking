@@ -195,7 +195,7 @@ export function TreeNodeRenderer({
       {/* Actions */}
       {actions && (
         <span
-          className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center gap-1"
+          className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150 flex items-center gap-1"
           onClick={(e) => e.stopPropagation()}
         >
           {actions}

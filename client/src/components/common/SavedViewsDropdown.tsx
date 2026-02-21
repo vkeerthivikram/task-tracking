@@ -164,7 +164,7 @@ function SavedViewItem({ view, isActive, onSelect, onDelete, onSetDefault }: Sav
               e.stopPropagation();
               setShowMenu(!showMenu);
             }}
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"
             aria-label="View options"
           >
             <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">

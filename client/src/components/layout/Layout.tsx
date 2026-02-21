@@ -8,20 +8,23 @@ import { Sidebar } from './Sidebar';
 import { Modal } from '../common/Modal';
 import { ProjectForm } from '../common/ProjectForm';
 import { TaskForm } from '../common/TaskForm';
+import { PersonForm } from '../common/PersonForm';
 import { ImportExportPanel } from '../common/ImportExportPanel';
 import { useApp } from '../../context/AppContext';
 import { useProjects } from '../../context/ProjectContext';
 import { useTasks } from '../../context/TaskContext';
-import type { CreateProjectDTO, CreateTaskDTO, UpdateProjectDTO, UpdateTaskDTO, Task, Project } from '../../types';
+import { usePeople } from '../../context/PeopleContext';
+import type { CreateProjectDTO, CreateTaskDTO, CreatePersonDTO, UpdateProjectDTO, UpdateTaskDTO, UpdatePersonDTO, Task, Project, Person } from '../../types';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
-  const { modal, closeModal, openTaskModal, openProjectModal } = useApp();
-  const { createProject, updateProject, currentProject } = useProjects();
+  const { modal, closeModal, openProjectModal, taskModalParentId, projectModalParentId } = useApp();
+  const { createProject, updateProject, currentProject, projects } = useProjects();
   const { createTask, updateTask } = useTasks();
+  const { createPerson, updatePerson } = usePeople();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -58,6 +61,22 @@ export function Layout({ children }: LayoutProps) {
       setIsSubmitting(false);
     }
   }, [modal.data, createTask, updateTask, closeModal]);
+
+  const handlePersonSubmit = useCallback(async (data: CreatePersonDTO | UpdatePersonDTO) => {
+    setIsSubmitting(true);
+    try {
+      if (modal.data as Person) {
+        await updatePerson((modal.data as Person).id, data as UpdatePersonDTO);
+      } else {
+        await createPerson(data as CreatePersonDTO);
+      }
+      closeModal();
+    } catch (error) {
+      console.error('Failed to save person:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [modal.data, createPerson, updatePerson, closeModal]);
   
   // Open add project modal
   const handleAddProject = useCallback(() => {
@@ -89,6 +108,7 @@ export function Layout({ children }: LayoutProps) {
       >
         <ProjectForm
           project={modal.data as Project}
+          parentProjectId={projectModalParentId}
           onSubmit={handleProjectSubmit}
           onCancel={closeModal}
           isLoading={isSubmitting}
@@ -106,7 +126,25 @@ export function Layout({ children }: LayoutProps) {
           task={modal.data as Task}
           project={currentProject}
           projectId={currentProject?.id}
+          parentTaskId={taskModalParentId ?? undefined}
           onSubmit={handleTaskSubmit}
+          onCancel={closeModal}
+          isLoading={isSubmitting}
+        />
+      </Modal>
+
+      {/* Person Modal */}
+      <Modal
+        isOpen={modal.isOpen && modal.type === 'person'}
+        onClose={closeModal}
+        title={(modal.data as Person) ? 'Edit Person' : 'Add Person'}
+        size="md"
+      >
+        <PersonForm
+          person={modal.data as Person}
+          projects={projects}
+          projectId={currentProject?.id}
+          onSubmit={handlePersonSubmit}
           onCancel={closeModal}
           isLoading={isSubmitting}
         />

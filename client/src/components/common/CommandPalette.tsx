@@ -129,8 +129,8 @@ const DataIcon = () => (
 
 export function CommandPalette() {
   const { isOpen, closePalette } = useCommandPalette();
-  const { setCurrentView, openTaskModal, openProjectModal, openImportExportModal } = useApp();
-  const { projects, selectProject } = useProjectSelection();
+  const { setCurrentView, openTaskModal, openProjectModal, openSubProjectModal, openPersonModal, openImportExportModal } = useApp();
+  const { projects, selectProject, currentProject } = useProjectSelection();
   const { tasks } = useTasks();
   const { people } = usePeople();
   
@@ -252,6 +252,20 @@ export function CommandPalette() {
         closePalette();
       },
     });
+
+    if (currentProject) {
+      commands.push({
+        id: 'action-new-subproject',
+        type: 'action',
+        label: 'Create sub-project in current project',
+        sublabel: `Parent: ${currentProject.name}`,
+        icon: <ActionIcon />,
+        action: () => {
+          openSubProjectModal(currentProject.id);
+          closePalette();
+        },
+      });
+    }
     
     commands.push({
       id: 'action-new-person',
@@ -259,7 +273,7 @@ export function CommandPalette() {
       label: 'Create new person',
       icon: <ActionIcon />,
       action: () => {
-        setCurrentView('people');
+        openPersonModal();
         closePalette();
       },
     });
@@ -290,7 +304,7 @@ export function CommandPalette() {
     });
     
     return commands;
-  }, [tasks, projects, people, setCurrentView, selectProject, closePalette, openTaskModal, openProjectModal, openImportExportModal]);
+  }, [tasks, projects, people, currentProject, setCurrentView, selectProject, closePalette, openTaskModal, openProjectModal, openSubProjectModal, openPersonModal, openImportExportModal]);
   
   // Filter commands based on query
   const filteredCommands = useMemo(() => {

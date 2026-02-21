@@ -64,7 +64,7 @@ export function ListView() {
     bulkUpdateTasks,
     bulkDeleteTasks,
   } = useTasks();
-  const { currentProjectId, closeModal, modal } = useApp();
+  const { currentProjectId, openSubTaskModal } = useApp();
 
   // Local state for filters and sorting
   const [filters, setFilters] = useState<ListFilters>(DEFAULT_FILTERS);
@@ -162,6 +162,10 @@ export function ListView() {
   const handleDeleteTask = useCallback((task: Task) => {
     setDeletingTask(task);
   }, []);
+
+  const handleCreateSubTask = useCallback((parentTaskId: number) => {
+    openSubTaskModal(parentTaskId);
+  }, [openSubTaskModal]);
 
   // Submit task update
   const handleTaskSubmit = async (data: CreateTaskDTO | UpdateTaskDTO) => {
@@ -378,6 +382,7 @@ export function ListView() {
                       task={task}
                       onEdit={handleEditTask}
                       onDelete={handleDeleteTask}
+                      onCreateSubTask={handleCreateSubTask}
                       isOverdue={isTaskOverdue(task)}
                       isSelected={isTaskSelected(task.id)}
                       onToggleSelection={toggleTaskSelection}
@@ -395,6 +400,7 @@ export function ListView() {
                   task={task}
                   onEdit={handleEditTask}
                   onDelete={handleDeleteTask}
+                  onCreateSubTask={handleCreateSubTask}
                   isOverdue={isTaskOverdue(task)}
                 />
               ))}

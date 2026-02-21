@@ -10,6 +10,8 @@ import {
   MoreHorizontal,
   Plus,
   FolderPlus,
+  FolderTree,
+  UserPlus,
   PanelLeft,
   Database,
 } from 'lucide-react';
@@ -34,6 +36,8 @@ export function Header() {
     currentView,
     openTaskModal,
     openProjectModal,
+    openSubProjectModal,
+    openPersonModal,
     openImportExportModal,
   } = useApp();
   const { currentProject } = useProjects();
@@ -144,6 +148,16 @@ export function Header() {
             <DropdownMenuItem onSelect={() => openProjectModal()}>
               <FolderPlus className="w-4 h-4 mr-2" />
               New Project
+            </DropdownMenuItem>
+            {currentProject && (
+              <DropdownMenuItem onSelect={() => openSubProjectModal(currentProject.id)}>
+                <FolderTree className="w-4 h-4 mr-2" />
+                New Sub-project
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onSelect={() => openPersonModal()}>
+              <UserPlus className="w-4 h-4 mr-2" />
+              New Person
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={toggleSidebar}>

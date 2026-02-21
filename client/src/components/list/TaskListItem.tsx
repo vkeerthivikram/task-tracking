@@ -3,7 +3,7 @@
 import React from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Calendar, AlertCircle, Pencil, Trash2, ChevronRight } from 'lucide-react';
+import { Calendar, AlertCircle, Pencil, Trash2, ChevronRight, Plus } from 'lucide-react';
 import type { Task } from '../../types';
 import { StatusBadge, PriorityBadge } from '../common/Badge';
 import { Button } from '../common/Button';
@@ -12,10 +12,11 @@ interface TaskListItemProps {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
+  onCreateSubTask?: (parentTaskId: number) => void;
   isOverdue: boolean;
 }
 
-export function TaskListItem({ task, onEdit, onDelete, isOverdue }: TaskListItemProps) {
+export function TaskListItem({ task, onEdit, onDelete, onCreateSubTask, isOverdue }: TaskListItemProps) {
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
@@ -52,6 +53,11 @@ export function TaskListItem({ task, onEdit, onDelete, isOverdue }: TaskListItem
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete(task);
+  };
+
+  const handleCreateSubTaskClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onCreateSubTask?.(task.id);
   };
 
   return (
@@ -126,6 +132,18 @@ export function TaskListItem({ task, onEdit, onDelete, isOverdue }: TaskListItem
 
       {/* Action Buttons - Visible on touch */}
       <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-end gap-2">
+        {onCreateSubTask && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCreateSubTaskClick}
+            className="text-xs px-3 py-1.5"
+            aria-label={`Add sub-task for ${task.title}`}
+          >
+            <Plus className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" />
+            Sub-task
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="sm"

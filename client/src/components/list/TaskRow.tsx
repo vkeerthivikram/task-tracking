@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Pencil, Trash2, Calendar, AlertCircle, Users, GitBranch, Check, Loader2 } from 'lucide-react';
+import { Pencil, Trash2, Calendar, AlertCircle, Users, GitBranch, Check, Loader2, Plus } from 'lucide-react';
 import type { Task, TaskStatus, TaskPriority } from '../../types';
 import { StatusBadge, PriorityBadge, TagBadge } from '../common/Badge';
 import { Button } from '../common/Button';
@@ -14,6 +14,7 @@ interface TaskRowProps {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
+  onCreateSubTask?: (parentTaskId: number) => void;
   isOverdue: boolean;
   isSelected?: boolean;
   onToggleSelection?: (taskId: number) => void;
@@ -38,6 +39,7 @@ export function TaskRow({
   task, 
   onEdit, 
   onDelete, 
+  onCreateSubTask,
   isOverdue,
   isSelected = false,
   onToggleSelection,
@@ -119,6 +121,11 @@ export function TaskRow({
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete(task);
+  };
+
+  const handleCreateSubTaskClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onCreateSubTask?.(task.id);
   };
   
   // Checkbox selection
@@ -581,9 +588,20 @@ export function TaskRow({
         <div
           className={clsx(
             'flex items-center gap-1 transition-opacity duration-150',
-            isHovered ? 'opacity-100' : 'opacity-0 sm:opacity-0'
+            isHovered ? 'opacity-100' : 'opacity-100 md:opacity-0'
           )}
         >
+          {onCreateSubTask && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCreateSubTaskClick}
+              className="p-1.5"
+              aria-label={`Add sub-task for ${task.title}`}
+            >
+              <Plus className="w-4 h-4" aria-hidden="true" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"

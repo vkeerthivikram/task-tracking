@@ -15,6 +15,7 @@ interface KanbanColumnProps {
   tasks: Task[];
   projectColor?: string;
   onTaskClick?: (task: Task) => void;
+  onCreateSubTask?: (parentTaskId: number) => void;
 }
 
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({
@@ -23,6 +24,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   tasks,
   projectColor,
   onTaskClick,
+  onCreateSubTask,
 }) => {
   const { setNodeRef, isOver } = useDroppable({
     id,
@@ -113,6 +115,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 key={task.id}
                 task={task}
                 onClick={onTaskClick}
+                onCreateSubTask={onCreateSubTask}
               />
             ))}
           </div>
