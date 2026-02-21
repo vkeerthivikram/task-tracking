@@ -8,14 +8,34 @@ import {
   Moon,
   Sun,
   MoreHorizontal,
+  Plus,
+  FolderPlus,
+  PanelLeft,
+  Database,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useProjects } from '../../context/ProjectContext';
 import { QuickAddTask } from '../common/QuickAddTask';
 import { Breadcrumbs } from '../common/Breadcrumbs';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
 
 export function Header() {
-  const { sidebarOpen, toggleSidebar, darkMode, toggleDarkMode, currentView } = useApp();
+  const {
+    sidebarOpen,
+    toggleSidebar,
+    darkMode,
+    toggleDarkMode,
+    currentView,
+    openTaskModal,
+    openProjectModal,
+    openImportExportModal,
+  } = useApp();
   const { currentProject } = useProjects();
   
   const viewLabels: Record<string, string> = {
@@ -100,21 +120,42 @@ export function Header() {
         </button>
         
         {/* More Options */}
-        <div className="relative">
-          <button
-            className={twMerge(
-              clsx(
-                'p-2 rounded-md text-gray-500 hover:text-gray-700',
-                'dark:text-gray-400 dark:hover:text-gray-200',
-                'hover:bg-gray-100 dark:hover:bg-gray-700',
-                'transition-colors duration-200'
-              )
-            )}
-            aria-label="More options"
-          >
-            <MoreHorizontal className="w-5 h-5" />
-          </button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className={twMerge(
+                clsx(
+                  'p-2 rounded-md text-gray-500 hover:text-gray-700',
+                  'dark:text-gray-400 dark:hover:text-gray-200',
+                  'hover:bg-gray-100 dark:hover:bg-gray-700',
+                  'transition-colors duration-200'
+                )
+              )}
+              aria-label="More options"
+            >
+              <MoreHorizontal className="w-5 h-5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuItem onSelect={() => openTaskModal()}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Task
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => openProjectModal()}>
+              <FolderPlus className="w-4 h-4 mr-2" />
+              New Project
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={toggleSidebar}>
+              <PanelLeft className="w-4 h-4 mr-2" />
+              {sidebarOpen ? 'Hide Sidebar' : 'Show Sidebar'}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => openImportExportModal()}>
+              <Database className="w-4 h-4 mr-2" />
+              Data Management
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
