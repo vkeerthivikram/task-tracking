@@ -9,7 +9,7 @@
 # Variables
 NODE := node
 NPM := npm
-DB_FILE := db/taskflow.db
+DB_FILE := db/taskmanager.db
 
 # Start the server
 start:

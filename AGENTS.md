@@ -76,7 +76,7 @@ task-tracking/
 │   ├── package.json
 │   ├── index.js                 # Server entry point with all route imports
 │   ├── data/
-│   │   └── taskflow.db          # SQLite database file
+│   │   └── taskmanager.db          # SQLite database file
 │   ├── db/
 │   │   ├── database.js          # SQLite connection (better-sqlite3)
 │   │   ├── schema.js            # Table definitions with migrations

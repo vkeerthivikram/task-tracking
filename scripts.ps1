@@ -3,7 +3,7 @@
 # Then call any function: Install-All, Start-Dev, etc.
 
 # Variables
-$Script:DB_FILE = "server\db\taskflow.db"
+$Script:DB_FILE = "server\db\taskmanager.db"
 
 # Install all dependencies (root + server + client)
 function Install-All {

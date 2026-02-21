@@ -8,6 +8,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // suppress them (e.g. during the migration transition period).
 const shouldIgnoreTypeErrors = process.env.NEXT_IGNORE_BUILD_ERRORS === 'true';
 
+// Backend connection configuration
+// - Local development: uses localhost (default)
+// - Docker: set BACKEND_HOST=backend (Docker service name)
+const backendHost = process.env.BACKEND_HOST || 'localhost';
+const backendPort = process.env.BACKEND_PORT || '19096';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Silence the workspace root warning (monorepo with multiple lockfiles)
@@ -21,7 +27,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: `http://backend:19096/api/:path*`,
+        destination: `http://${backendHost}:${backendPort}/api/:path*`,
       },
     ];
   },

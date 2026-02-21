@@ -22,5 +22,6 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
+      - BACKEND_HOST=backend
       - BACKEND_PORT=19096
     command: npm run dev

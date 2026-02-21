@@ -9,7 +9,7 @@
 # Variables
 NODE := node
 NPM := npm
-DB_FILE := server/db/taskflow.db
+DB_FILE := server/db/taskmanager.db
 
 # Install all dependencies (root + server + client)
 install:

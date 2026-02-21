@@ -3,7 +3,7 @@
 # Then call any function: Start-Server, Seed-Database, etc.
 
 # Variables
-$Script:DB_FILE = "db\taskflow.db"
+$Script:DB_FILE = "db\taskmanager.db"
 
 # Start the backend server
 function Start-Server {
