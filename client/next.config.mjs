@@ -18,6 +18,8 @@ const backendPort = process.env.BACKEND_PORT || '19096';
 const nextConfig = {
   // Silence the workspace root warning (monorepo with multiple lockfiles)
   outputFileTracingRoot: __dirname,
+  // Hide the dev indicator (flame icon) by default
+  devIndicators: false,
   // Enable standalone output for Docker
   output: 'standalone',
   typescript: {
