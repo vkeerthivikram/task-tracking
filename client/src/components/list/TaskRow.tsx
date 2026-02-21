@@ -588,7 +588,7 @@ export function TaskRow({
         <div
           className={clsx(
             'flex items-center gap-1 transition-opacity duration-150',
-            isHovered ? 'opacity-100' : 'opacity-100 md:opacity-0'
+            isHovered ? 'opacity-100' : 'opacity-100 lg:opacity-0'
           )}
         >
           {onCreateSubTask && (
@@ -596,7 +596,7 @@ export function TaskRow({
               variant="ghost"
               size="sm"
               onClick={handleCreateSubTaskClick}
-              className="p-1.5"
+              className="p-1"
               aria-label={`Add sub-task for ${task.title}`}
             >
               <Plus className="w-4 h-4" aria-hidden="true" />
@@ -606,7 +606,7 @@ export function TaskRow({
             variant="ghost"
             size="sm"
             onClick={handleEditClick}
-            className="p-1.5"
+            className="p-1"
             aria-label={`Edit ${task.title}`}
           >
             <Pencil className="w-4 h-4" aria-hidden="true" />
@@ -615,7 +615,7 @@ export function TaskRow({
             variant="ghost"
             size="sm"
             onClick={handleDeleteClick}
-            className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+            className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
             aria-label={`Delete ${task.title}`}
           >
             <Trash2 className="w-4 h-4" aria-hidden="true" />

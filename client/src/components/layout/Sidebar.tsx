@@ -268,7 +268,7 @@ export function Sidebar({ onAddProject }: SidebarProps) {
                     aria-label={`Add sub-project under ${project.name}`}
                     title="Add sub-project"
                   >
-                    <FolderPlus className="w-3.5 h-3.5" />
+                    <FolderPlus className="w-4 h-4" />
                   </button>
                   {currentProject?.id === project.id && (
                     <ChevronRight className="w-4 h-4 ml-auto text-gray-400" />

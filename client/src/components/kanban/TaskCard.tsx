@@ -130,7 +130,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, onCreateSubTa
               title="Add sub-task"
               aria-label="Add sub-task"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-4 h-4" />
             </button>
           </div>
         )}
