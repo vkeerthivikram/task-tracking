@@ -7,6 +7,50 @@ export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 // View Types
 export type ViewType = 'kanban' | 'list' | 'calendar' | 'timeline' | 'dashboard' | 'people';
 
+// App Theme Types
+export type AppTheme =
+  | 'taskflow-light'
+  | 'taskflow-dark'
+  | 'catppuccin-latte'
+  | 'catppuccin-frappe'
+  | 'catppuccin-macchiato'
+  | 'catppuccin-mocha'
+  | 'dracula'
+  | 'nord'
+  | 'tokyo-night'
+  | 'one-dark'
+  | 'gruvbox-light'
+  | 'gruvbox-dark'
+  | 'solarized-light'
+  | 'solarized-dark'
+  | 'github-light'
+  | 'github-dark';
+
+export interface ThemeOption {
+  value: AppTheme;
+  label: string;
+  mode: 'light' | 'dark';
+}
+
+export const APP_THEME_OPTIONS: ThemeOption[] = [
+  { value: 'taskflow-light', label: 'TaskFlow Light', mode: 'light' },
+  { value: 'taskflow-dark', label: 'TaskFlow Dark', mode: 'dark' },
+  { value: 'catppuccin-latte', label: 'Catppuccin Latte', mode: 'light' },
+  { value: 'catppuccin-frappe', label: 'Catppuccin Frappé', mode: 'dark' },
+  { value: 'catppuccin-macchiato', label: 'Catppuccin Macchiato', mode: 'dark' },
+  { value: 'catppuccin-mocha', label: 'Catppuccin Mocha', mode: 'dark' },
+  { value: 'dracula', label: 'Dracula', mode: 'dark' },
+  { value: 'nord', label: 'Nord', mode: 'dark' },
+  { value: 'tokyo-night', label: 'Tokyo Night', mode: 'dark' },
+  { value: 'one-dark', label: 'One Dark', mode: 'dark' },
+  { value: 'gruvbox-light', label: 'Gruvbox Light', mode: 'light' },
+  { value: 'gruvbox-dark', label: 'Gruvbox Dark', mode: 'dark' },
+  { value: 'solarized-light', label: 'Solarized Light', mode: 'light' },
+  { value: 'solarized-dark', label: 'Solarized Dark', mode: 'dark' },
+  { value: 'github-light', label: 'GitHub Light', mode: 'light' },
+  { value: 'github-dark', label: 'GitHub Dark', mode: 'dark' },
+];
+
 // Note Entity Types
 export type NoteEntityType = 'project' | 'task' | 'person';
 

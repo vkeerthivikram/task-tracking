@@ -14,16 +14,24 @@ import {
   UserPlus,
   PanelLeft,
   Database,
+  Palette,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useProjects } from '../../context/ProjectContext';
+import { APP_THEME_OPTIONS } from '../../types';
 import { QuickAddTask } from '../common/QuickAddTask';
 import { Breadcrumbs } from '../common/Breadcrumbs';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuLabel,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 
@@ -31,6 +39,8 @@ export function Header() {
   const {
     sidebarOpen,
     toggleSidebar,
+    theme,
+    setTheme,
     darkMode,
     toggleDarkMode,
     currentView,
@@ -164,6 +174,23 @@ export function Header() {
               <PanelLeft className="w-4 h-4 mr-2" />
               {sidebarOpen ? 'Hide Sidebar' : 'Show Sidebar'}
             </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Palette className="w-4 h-4 mr-2" />
+                Theme
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-60">
+                <DropdownMenuLabel>Choose theme</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value as typeof theme)}>
+                  {APP_THEME_OPTIONS.map((option) => (
+                    <DropdownMenuRadioItem key={option.value} value={option.value}>
+                      {option.label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
             <DropdownMenuItem onSelect={() => openImportExportModal()}>
               <Database className="w-4 h-4 mr-2" />
               Data Management

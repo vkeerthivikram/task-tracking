@@ -8,12 +8,34 @@ export const metadata: Metadata = {
   description: 'Local-first project and task management',
 };
 
-// Script to set dark mode before hydration to prevent flash
+// Script to set theme before hydration to prevent flash
 const darkModeScript = `
 (function() {
-  const stored = localStorage.getItem('darkMode');
+  const storedTheme = localStorage.getItem('theme');
+  const darkThemes = new Set([
+    'taskflow-dark',
+    'catppuccin-frappe',
+    'catppuccin-macchiato',
+    'catppuccin-mocha',
+    'dracula',
+    'nord',
+    'tokyo-night',
+    'one-dark',
+    'gruvbox-dark',
+    'solarized-dark',
+    'github-dark'
+  ]);
+  const isValidStoredTheme = typeof storedTheme === 'string' && storedTheme.length > 0;
+  const theme = isValidStoredTheme ? storedTheme : null;
+  const legacyDarkMode = localStorage.getItem('darkMode');
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const isDark = stored !== null ? JSON.parse(stored) : prefersDark;
+  const isDark = theme
+    ? darkThemes.has(theme)
+    : (legacyDarkMode !== null ? JSON.parse(legacyDarkMode) : prefersDark);
+
+  const resolvedTheme = theme || (isDark ? 'taskflow-dark' : 'taskflow-light');
+  document.documentElement.setAttribute('data-theme', resolvedTheme);
+
   if (isDark) {
     document.documentElement.classList.add('dark');
   } else {

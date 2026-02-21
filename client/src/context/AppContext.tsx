@@ -1,7 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
-import type { ViewType, ModalState, Task, Project, Person } from '../types';
+import type { ViewType, ModalState, Task, Project, Person, AppTheme } from '../types';
+import { APP_THEME_OPTIONS } from '../types';
 
 interface AppContextType {
   // View state
@@ -31,6 +32,8 @@ interface AppContextType {
   closeModal: () => void;
   
   // Theme
+  theme: AppTheme;
+  setTheme: (theme: AppTheme) => void;
   darkMode: boolean;
   toggleDarkMode: () => void;
 }
@@ -42,8 +45,7 @@ interface AppProviderProps {
 }
 
 export function AppProvider({ children }: AppProviderProps) {
-  // Initialize with false to match server-side render, will be updated by effect
-  const [darkMode, setDarkMode] = useState<boolean>(false);
+  const [theme, setThemeState] = useState<AppTheme>('taskflow-light');
   const [currentView, setCurrentView] = useState<ViewType>('kanban');
   const [currentProjectId, setCurrentProjectId] = useState<number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -55,45 +57,59 @@ export function AppProvider({ children }: AppProviderProps) {
     data: null,
   });
   
-  // Initialize dark mode from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem('darkMode');
-    if (stored !== null) {
-      const isDark = JSON.parse(stored);
-      setDarkMode(isDark);
-      // Sync with DOM in case the inline script didn't run
-      if (isDark) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    } else {
-      // Check system preference
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setDarkMode(prefersDark);
-      if (prefersDark) {
-        document.documentElement.classList.add('dark');
-      }
-    }
+  const isDarkTheme = useCallback((themeName: AppTheme) => {
+    const themeOption = APP_THEME_OPTIONS.find(option => option.value === themeName);
+    return themeOption?.mode === 'dark';
   }, []);
-  
-  // Update DOM and localStorage when darkMode changes
-  useEffect(() => {
-    if (darkMode) {
+
+  const applyThemeToDom = useCallback((themeName: AppTheme) => {
+    document.documentElement.setAttribute('data-theme', themeName);
+    if (isDarkTheme(themeName)) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-    localStorage.setItem('darkMode', JSON.stringify(darkMode));
-  }, [darkMode]);
+  }, [isDarkTheme]);
+
+  // Initialize theme from localStorage on mount
+  useEffect(() => {
+    const storedTheme = localStorage.getItem('theme') as AppTheme | null;
+    const isValidStoredTheme = storedTheme !== null && APP_THEME_OPTIONS.some(option => option.value === storedTheme);
+
+    if (isValidStoredTheme && storedTheme) {
+      setThemeState(storedTheme);
+      applyThemeToDom(storedTheme);
+    } else {
+      // Backward compatibility with previous darkMode storage key
+      const legacyDarkMode = localStorage.getItem('darkMode');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const shouldUseDark = legacyDarkMode !== null ? JSON.parse(legacyDarkMode) : prefersDark;
+      const fallbackTheme: AppTheme = shouldUseDark ? 'taskflow-dark' : 'taskflow-light';
+      setThemeState(fallbackTheme);
+      applyThemeToDom(fallbackTheme);
+    }
+  }, [applyThemeToDom]);
+  
+  // Update DOM and localStorage when theme changes
+  useEffect(() => {
+    applyThemeToDom(theme);
+    localStorage.setItem('theme', theme);
+    localStorage.setItem('darkMode', JSON.stringify(isDarkTheme(theme)));
+  }, [theme, applyThemeToDom, isDarkTheme]);
   
   const toggleSidebar = useCallback(() => {
     setSidebarOpen(prev => !prev);
   }, []);
   
-  const toggleDarkMode = useCallback(() => {
-    setDarkMode(prev => !prev);
+  const setTheme = useCallback((themeName: AppTheme) => {
+    setThemeState(themeName);
   }, []);
+
+  const darkMode = isDarkTheme(theme);
+
+  const toggleDarkMode = useCallback(() => {
+    setThemeState(prevTheme => isDarkTheme(prevTheme) ? 'taskflow-light' : 'taskflow-dark');
+  }, [isDarkTheme]);
   
   const openTaskModal = useCallback((task?: Task, options?: { parentTaskId?: number | null }) => {
     setTaskModalParentId(options?.parentTaskId ?? null);
@@ -182,6 +198,8 @@ export function AppProvider({ children }: AppProviderProps) {
     openConfirmModal,
     openImportExportModal,
     closeModal,
+    theme,
+    setTheme,
     darkMode,
     toggleDarkMode,
   };
