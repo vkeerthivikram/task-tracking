@@ -66,7 +66,7 @@
   --theme-text-dim: #9ca3af;
 }
 
-[data-theme='taskflow-light'] {
+[data-theme='celestask-light'] {
   --theme-bg: #ffffff;
   --theme-surface: #f9fafb;
   --theme-surface-elevated: #f3f4f6;
@@ -83,7 +83,7 @@
   --theme-accent-strong: #2563eb;
 }
 
-[data-theme='taskflow-dark'] {
+[data-theme='celestask-dark'] {
   --theme-bg: #111827;
   --theme-surface: #1f2937;
   --theme-surface-elevated: #374151;

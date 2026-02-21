@@ -1,4 +1,4 @@
-# TaskFlow Server - Makefile
+# Celestask Server - Makefile
 # Commands for managing the backend server
 
 .PHONY: start seed clean help
@@ -9,7 +9,7 @@
 # Variables
 NODE := node
 NPM := npm
-DB_FILE := db/taskmanager.db
+DB_FILE := db/celestask.db
 
 # Start the server
 start:
@@ -31,7 +31,7 @@ clean:
 # Display available commands
 help:
 	@echo ""
-	@echo "TaskFlow Server - Available Commands"
+	@echo "Celestask Server - Available Commands"
 	@echo "===================================="
 	@echo ""
 	@echo "  make start    - Start the backend server"

@@ -1,9 +1,9 @@
-# TaskFlow Server - PowerShell Scripts
+# Celestask Server - PowerShell Scripts
 # Usage: . .\scripts.ps1   (dot-source to load functions)
 # Then call any function: Start-Server, Seed-Database, etc.
 
 # Variables
-$Script:DB_FILE = "db\taskmanager.db"
+$Script:DB_FILE = "db\celestask.db"
 
 # Start the backend server
 function Start-Server {
@@ -36,7 +36,7 @@ function Clean-Server {
 # Display available commands
 function Show-Help {
     Write-Host ""
-    Write-Host "TaskFlow Server - Available Commands" -ForegroundColor White
+    Write-Host "Celestask Server - Available Commands" -ForegroundColor White
     Write-Host "====================================" -ForegroundColor White
     Write-Host ""
     Write-Host "  Start-Server     - Start the backend server" -ForegroundColor Yellow

@@ -1,7 +1,7 @@
 {
-  "name": "taskflow",
+  "name": "celestask",
   "version": "1.0.0",
-  "description": "A full-stack task tracking and project management application with React frontend and Express backend",
+  "description": "Celestask: a full-stack project management application with React frontend and Express backend",
   "private": true,
   "engines": {
     "node": ">=22 <25"

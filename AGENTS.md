@@ -1,8 +1,8 @@
-# TaskFlow - Comprehensive AI Agent Documentation
+# Celestask - Comprehensive AI Agent Documentation
 
 ## 1. Project Overview
 
-TaskFlow is a local-first, single-user project management application inspired by Jira. It provides a full-stack solution for managing projects, tasks, people, and tags with multiple view types (Kanban, List, Calendar, Timeline, Dashboard).
+Celestask is a local-first, single-user project management application inspired by Jira. It provides a full-stack solution for managing projects, tasks, people, and tags with multiple view types (Kanban, List, Calendar, Timeline, Dashboard).
 
 ### Architecture Summary
 - **Monorepo Structure**: Root directory contains `server/` (Express backend) and `client/` (Next.js frontend)
@@ -63,7 +63,7 @@ credentials: true
 ## 3. Project Structure (Complete File Tree)
 
 ```
-task-tracking/
+celestask/
 ├── AGENTS.md                    # This documentation file
 ├── README.md                    # Project documentation
 ├── docs/
@@ -76,7 +76,7 @@ task-tracking/
 │   ├── package.json
 │   ├── index.js                 # Server entry point with all route imports
 │   ├── data/
-│   │   └── taskmanager.db          # SQLite database file
+│   │   └── celestask.db          # SQLite database file
 │   ├── db/
 │   │   ├── database.js          # SQLite connection (better-sqlite3)
 │   │   ├── schema.js            # Table definitions with migrations
@@ -978,7 +978,7 @@ Located in `components/people/`:
 ### Root package.json
 ```json
 {
-  "name": "taskflow",
+  "name": "celestask",
   "version": "1.0.0",
   "engines": { "node": ">=22 <25" },
   "scripts": {
@@ -1016,7 +1016,7 @@ Located in `components/people/`:
 ### Client package.json
 ```json
 {
-  "name": "task-tracking-client",
+  "name": "celestask-client",
   "version": "0.0.0",
   "scripts": {
     "dev": "next dev -p 12096",

@@ -113,7 +113,7 @@ All routes use the shared `Layout` component (Header + Sidebar) and are wrapped 
 ## Project Structure
 
 ```
-task-tracking/
+celestask/
 ├── package.json                    # Root package.json for scripts
 ├── ARCHITECTURE.md                 # This document
 ├── README.md                       # Project documentation
@@ -278,7 +278,7 @@ task-tracking/
 │   │       └── index.ts
 │   │
 │   └── data/
-│       └── tasktracking.db        # SQLite database file
+│       └── celestask.db        # SQLite database file
 │
 └── scripts/
     ├── dev.sh                      # Start development servers
@@ -1500,7 +1500,7 @@ flowchart TD
     end
     
     subgraph Storage [SQLite Database]
-        DB[(tasktracking.db)]
+        DB[(celestask.db)]
     end
     
     UI --> Context

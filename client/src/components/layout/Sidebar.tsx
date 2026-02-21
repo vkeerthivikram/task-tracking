@@ -166,7 +166,7 @@ export function Sidebar({ onAddProject }: SidebarProps) {
             <Kanban className="w-5 h-5 text-white" />
           </div>
           <span className="font-semibold text-gray-900 dark:text-gray-100">
-            TaskTrack
+            Celestask
           </span>
         </div>
         <button
@@ -323,7 +323,7 @@ export function Sidebar({ onAddProject }: SidebarProps) {
       {/* Footer */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
         <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
-          Task Tracking v1.0.0
+          Celestask v1.0.0
         </p>
       </div>
     </>

@@ -5,11 +5,11 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
-    container_name: taskflow-backend
+    container_name: celestask-backend
     ports:
       - "19096:19096"
     volumes:
-      - taskflow-data:/app/data
+      - celestask-data:/app/data
     environment:
       - NODE_ENV=production
       - PORT=19096
@@ -25,7 +25,7 @@ services:
     build:
       context: ./client
       dockerfile: Dockerfile
-    container_name: taskflow-frontend
+    container_name: celestask-frontend
     ports:
       - "12096:12096"
     environment:
@@ -45,11 +45,11 @@ services:
       start_period: 10s
 
 volumes:
-  taskflow-data:
+  celestask-data:
     driver: local
 
 networks:
   default:
-    name: taskflow-network
+    name: celestask-network
 
 # Development override - use with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up

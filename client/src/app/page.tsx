@@ -32,7 +32,7 @@ export default function HomePage() {
       <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center">
         <div className="max-w-md p-8 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            Welcome to TaskTrack!
+            Welcome to Celestask!
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             Get started by creating your first project.

@@ -9,8 +9,8 @@ export type ViewType = 'kanban' | 'list' | 'calendar' | 'timeline' | 'dashboard'
 
 // App Theme Types
 export type AppTheme =
-  | 'taskflow-light'
-  | 'taskflow-dark'
+  | 'celestask-light'
+  | 'celestask-dark'
   | 'catppuccin-latte'
   | 'catppuccin-frappe'
   | 'catppuccin-macchiato'
@@ -33,8 +33,8 @@ export interface ThemeOption {
 }
 
 export const APP_THEME_OPTIONS: ThemeOption[] = [
-  { value: 'taskflow-light', label: 'TaskFlow Light', mode: 'light' },
-  { value: 'taskflow-dark', label: 'TaskFlow Dark', mode: 'dark' },
+  { value: 'celestask-light', label: 'Celestask Light', mode: 'light' },
+  { value: 'celestask-dark', label: 'Celestask Dark', mode: 'dark' },
   { value: 'catppuccin-latte', label: 'Catppuccin Latte', mode: 'light' },
   { value: 'catppuccin-frappe', label: 'Catppuccin Frappé', mode: 'dark' },
   { value: 'catppuccin-macchiato', label: 'Catppuccin Macchiato', mode: 'dark' },

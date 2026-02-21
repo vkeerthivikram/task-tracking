@@ -97,7 +97,7 @@ export function Header() {
               />
             )}
             <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {currentProject?.name || 'Task Tracking'}
+              {currentProject?.name || 'Celestask'}
             </h1>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400">

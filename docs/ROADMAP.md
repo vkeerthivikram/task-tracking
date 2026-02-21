@@ -1,4 +1,4 @@
-# TaskFlow Product Roadmap
+# Celestask Product Roadmap
 
 **Version:** v2.0.0 → Future Releases  
 **Document Date:** February 2026  
@@ -30,11 +30,11 @@ This roadmap synthesizes findings from two comprehensive audits:
 - **UX Audit** - Evaluating user experience maturity and pain points
 - **Product Strategy & Competitive Audit** - Analyzing market position and feature gaps
 
-The document provides a prioritized, actionable development plan for TaskFlow's evolution from v2.0.0 through v2.2.0+.
+The document provides a prioritized, actionable development plan for Celestask's evolution from v2.0.0 through v2.2.0+.
 
-### 1.2 Current State: TaskFlow v2.0.0
+### 1.2 Current State: Celestask v2.0.0
 
-TaskFlow is a **local-first, single-user project management tool** positioned as a simplified Jira alternative. Built entirely through AI agent collaboration, it demonstrates a unique development approach while delivering production-ready functionality.
+Celestask is a **local-first, single-user project management tool** positioned as a simplified Jira alternative. Built entirely through AI agent collaboration, it demonstrates a unique development approach while delivering production-ready functionality.
 
 | Aspect | Status |
 |--------|--------|
@@ -101,7 +101,7 @@ The v2.0.0 release represents a major frontend architecture modernization:
 ┌─────────────────────────────────────────────────────────────┐
 │                    PM TOOL LANDSCAPE                        │
 ├─────────────────────────────────────────────────────────────┤
-│  Enterprise         │ TaskFlow        │ Personal            │
+│  Enterprise         │ Celestask       │ Personal            │
 │  ──────────         │ Opportunity     │ ─────────           │
 │  Jira               │    ┌─────┐      │ Todoist             │
 │  ClickUp            │    │LOCAL│      │ Things              │
@@ -122,7 +122,7 @@ The v2.0.0 release represents a major frontend architecture modernization:
 
 ### 1.4 Strategic Positioning Statement
 
-> **"TaskFlow is the privacy-first project management tool for individuals and small teams who want enterprise features without enterprise complexity or cost."**
+> **"Celestask is the privacy-first project management tool for individuals and small teams who want enterprise features without enterprise complexity or cost."**
 
 **Core Value Propositions:**
 1. **Local-First** - Your data stays on your machine
@@ -156,7 +156,7 @@ The v2.0.0 release represents a major frontend architecture modernization:
 
 ```mermaid
 quadrantChart
-    title TaskFlow Strategic Position
+    title Celestask Strategic Position
     x-axis Internal Weakness --> Internal Strength
     y-axis External Threat --> External Opportunity
     quadrant-1 Leverage
@@ -452,7 +452,7 @@ Strategic investments requiring platform-level changes.
 
 ```mermaid
 gantt
-    title TaskFlow Release Timeline
+    title Celestask Release Timeline
     dateFormat  YYYY-MM-DD
     section v2.0.0
     Next.js & shadcn/ui Migration  :a1, 2026-02-01, 20d

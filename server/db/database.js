@@ -9,7 +9,7 @@ if (!fs.existsSync(dataDir)) {
 }
 
 // Create database connection
-const dbPath = path.join(dataDir, 'taskmanager.db');
+const dbPath = path.join(dataDir, 'celestask.db');
 const db = new Database(dbPath);
 
 // Enable foreign keys

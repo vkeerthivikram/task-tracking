@@ -134,7 +134,7 @@ const DEFAULT_SHORTCUTS: ShortcutConfig[] = [
 const ShortcutContext = createContext<ShortcutContextType | undefined>(undefined);
 
 // Local storage key for shortcut preferences
-const STORAGE_KEY = 'taskflow-shortcut-preferences';
+const STORAGE_KEY = 'celestask-shortcut-preferences';
 
 // Global callback for command palette (set by CommandPaletteProvider)
 let commandPaletteCallback: (() => void) | null = null;

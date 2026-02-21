@@ -1,4 +1,4 @@
-# TaskFlow Product Strategy & Competitive Feature Audit
+# Celestask Product Strategy & Competitive Feature Audit
 
 **Version:** v1.3.0 Analysis  
 **Date:** February 2026  
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-TaskFlow is a **local-first, single-user project management tool** positioned as a simplified Jira alternative. After comprehensive analysis against 6 major competitors, this audit identifies **47 feature recommendations** categorized into Quick Wins, Major Releases, and Long-term Roadmap items.
+Celestask is a **local-first, single-user project management tool** positioned as a simplified Jira alternative. After comprehensive analysis against 6 major competitors, this audit identifies **47 feature recommendations** categorized into Quick Wins, Major Releases, and Long-term Roadmap items.
 
 ### Key Strategic Findings
 
@@ -25,7 +25,7 @@ TaskFlow is a **local-first, single-user project management tool** positioned as
 
 ### 1.1 Competitor Comparison Matrix
 
-| Feature Area | TaskFlow | Jira | Linear | Notion | Todoist | ClickUp | Obsidian |
+| Feature Area | Celestask | Jira | Linear | Notion | Todoist | ClickUp | Obsidian |
 |-------------|:--------:|:----:|:------:|:------:|:-------:|:-------:|:--------:|
 | **Local-First** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | **Offline Capable** | ✅ | ❌ | ❌ | Partial | ❌ | ❌ | ✅ |
@@ -55,42 +55,42 @@ TaskFlow is a **local-first, single-user project management tool** positioned as
 ### 1.2 Competitive Positioning Analysis
 
 #### vs. Jira (Enterprise PM)
-| Aspect | TaskFlow Position |
+| Aspect | Celestask Position |
 |--------|-------------------|
 | **Advantages** | Simplicity, no learning curve, local-first privacy, no subscription |
 | **Gaps** | No automation, no workflows, limited reporting, no agile artifacts |
 | **Strategy** | Target Jira refugees wanting simplicity; individuals/small teams |
 
 #### vs. Linear (Modern Issue Tracking)
-| Aspect | TaskFlow Position |
+| Aspect | Celestask Position |
 |--------|-------------------|
 | **Advantages** | Local-first, offline, privacy, no vendor lock-in |
 | **Gaps** | Missing keyboard shortcuts, no automation, no GitHub-like workflows |
 | **Strategy** | Appeal to developers who value data ownership |
 
 #### vs. Notion (All-in-One Workspace)
-| Aspect | TaskFlow Position |
+| Aspect | Celestask Position |
 |--------|-------------------|
 | **Advantages** | Purpose-built for PM, faster, more structured |
 | **Gaps** | No databases, no wiki-style pages, limited flexibility |
 | **Strategy** | Focus on structured task management over flexible docs |
 
 #### vs. Todoist/Things (Personal Task Management)
-| Aspect | TaskFlow Position |
+| Aspect | Celestask Position |
 |--------|-------------------|
 | **Advantages** | More views, project hierarchy, team features |
 | **Gaps** | No quick capture, no natural language input, no mobile |
 | **Strategy** | Position as upgrade path from simple todo apps |
 
 #### vs. ClickUp (Feature-Rich PM)
-| Aspect | TaskFlow Position |
+| Aspect | Celestask Position |
 |--------|-------------------|
 | **Advantages** | Simpler, focused, faster, no bloat |
 | **Gaps** | Missing many features (time tracking, dependencies, automation) |
 | **Strategy** | Be the anti-ClickUp - simple but powerful |
 
 #### vs. Obsidian (Local-First Knowledge)
-| Aspect | TaskFlow Position |
+| Aspect | Celestask Position |
 |--------|-------------------|
 | **Advantages** | Purpose-built PM with views, structured data |
 | **Gaps** | No linking/graph view, no plugins ecosystem |
@@ -100,7 +100,7 @@ TaskFlow is a **local-first, single-user project management tool** positioned as
 
 ```mermaid
 quadrantChart
-    title TaskFlow Strategic Position
+    title Celestask Strategic Position
     x-axis Internal Weakness --> Internal Strength
     y-axis External Threat --> External Opportunity
     quadrant-1 Leverage
@@ -427,7 +427,7 @@ Strategic investments requiring platform-level changes.
 │                    PM TOOL LANDSCAPE                        │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  Enterprise         │ TaskFlow        │ Personal            │
+│  Enterprise         │ Celestask       │ Personal            │
 │  ──────────         │ Opportunity     │ ─────────           │
 │  Jira               │                 │ Todoist             │
 │  ClickUp            │    ┌─────┐      │ Things              │

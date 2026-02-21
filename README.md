@@ -1,4 +1,4 @@
-# 📋 TaskFlow - Project Management Application
+# 📋 Celestask - Project Management Application
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com)
 [![Version](https://img.shields.io/badge/version-1.6.0-blue)](https://github.com)
@@ -182,7 +182,7 @@ npm --version
 ### 1. Clone the Repository
 ```bash
 git clone <repository-url>
-cd task-tracking
+cd celestask
 ```
 
 ### 2. Select Node Version (Recommended)
@@ -1037,7 +1037,7 @@ Response:
 ### Storage Location
 The SQLite database is stored at:
 ```
-server/data/taskmanager.db
+server/data/celestask.db
 ```
 
 ### Tables
@@ -1182,7 +1182,7 @@ On first run, the database is automatically seeded with:
 ## 📁 Project Structure
 
 ```
-task-tracking/
+celestask/
 ├── ARCHITECTURE.md          # Detailed architecture documentation
 ├── AGENTS.md                # AI agent workflow documentation
 ├── README.md               # This file
@@ -1191,7 +1191,7 @@ task-tracking/
 │   ├── package.json
 │   ├── index.js           # Server entry point
 │   ├── data/              # SQLite database storage
-│   │   └── taskmanager.db
+│   │   └── celestask.db
 │   ├── db/
 │   │   ├── database.js    # SQLite connection
 │   │   ├── schema.js      # Table definitions
@@ -1370,7 +1370,7 @@ This project is licensed under the **MIT License**.
 ```
 MIT License
 
-Copyright (c) 2024 TaskFlow
+Copyright (c) 2024 Celestask
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

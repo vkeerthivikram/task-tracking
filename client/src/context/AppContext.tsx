@@ -45,7 +45,7 @@ interface AppProviderProps {
 }
 
 export function AppProvider({ children }: AppProviderProps) {
-  const [theme, setThemeState] = useState<AppTheme>('taskflow-light');
+  const [theme, setThemeState] = useState<AppTheme>('celestask-light');
   const [currentView, setCurrentView] = useState<ViewType>('kanban');
   const [currentProjectId, setCurrentProjectId] = useState<number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -84,7 +84,7 @@ export function AppProvider({ children }: AppProviderProps) {
       const legacyDarkMode = localStorage.getItem('darkMode');
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       const shouldUseDark = legacyDarkMode !== null ? JSON.parse(legacyDarkMode) : prefersDark;
-      const fallbackTheme: AppTheme = shouldUseDark ? 'taskflow-dark' : 'taskflow-light';
+      const fallbackTheme: AppTheme = shouldUseDark ? 'celestask-dark' : 'celestask-light';
       setThemeState(fallbackTheme);
       applyThemeToDom(fallbackTheme);
     }
@@ -108,7 +108,7 @@ export function AppProvider({ children }: AppProviderProps) {
   const darkMode = isDarkTheme(theme);
 
   const toggleDarkMode = useCallback(() => {
-    setThemeState(prevTheme => isDarkTheme(prevTheme) ? 'taskflow-light' : 'taskflow-dark');
+    setThemeState(prevTheme => isDarkTheme(prevTheme) ? 'celestask-light' : 'celestask-dark');
   }, [isDarkTheme]);
   
   const openTaskModal = useCallback((task?: Task, options?: { parentTaskId?: number | null }) => {

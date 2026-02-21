@@ -1,4 +1,4 @@
-# TaskFlow - Root Makefile
+# Celestask - Root Makefile
 # Simplified commands for installation and running the application
 
 .PHONY: install dev server client build clean reinstall help db-reset
@@ -9,7 +9,7 @@
 # Variables
 NODE := node
 NPM := npm
-DB_FILE := server/db/taskmanager.db
+DB_FILE := server/db/celestask.db
 
 # Install all dependencies (root + server + client)
 install:
@@ -62,7 +62,7 @@ db-reset:
 # Display available commands
 help:
 	@echo ""
-	@echo "TaskFlow - Available Commands"
+	@echo "Celestask - Available Commands"
 	@echo "============================="
 	@echo ""
 	@echo "  make install     - Install all dependencies (root + server + client)"

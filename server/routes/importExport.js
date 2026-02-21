@@ -45,7 +45,7 @@ router.get('/', (req, res) => {
     
     // Generate filename with current date
     const dateStr = new Date().toISOString().split('T')[0];
-    const filename = `taskflow-export-${dateStr}.json`;
+    const filename = `celestask-export-${dateStr}.json`;
     
     // Set response headers for file download
     res.setHeader('Content-Type', 'application/json');
@@ -279,7 +279,7 @@ router.post('/', (req, res) => {
  */
 router.get('/sqlite', (req, res) => {
   try {
-    const dbPath = path.join(__dirname, '..', 'data', 'taskmanager.db');
+    const dbPath = path.join(__dirname, '..', 'data', 'celestask.db');
     
     // Check if database file exists
     if (!fs.existsSync(dbPath)) {
@@ -294,7 +294,7 @@ router.get('/sqlite', (req, res) => {
     
     // Generate filename with current date
     const dateStr = new Date().toISOString().split('T')[0];
-    const filename = `taskflow-backup-${dateStr}.db`;
+    const filename = `celestask-backup-${dateStr}.db`;
     
     // Set response headers for file download
     res.setHeader('Content-Type', 'application/octet-stream');

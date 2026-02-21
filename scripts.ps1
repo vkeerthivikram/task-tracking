@@ -1,9 +1,9 @@
-# TaskFlow Project Management Scripts
+# Celestask Project Management Scripts
 # Usage: . .\scripts.ps1   (dot-source to load functions)
 # Then call any function: Install-All, Start-Dev, etc.
 
 # Variables
-$Script:DB_FILE = "server\db\taskmanager.db"
+$Script:DB_FILE = "server\db\celestask.db"
 
 # Install all dependencies (root + server + client)
 function Install-All {
@@ -118,7 +118,7 @@ function Reset-Database {
 # Display available commands
 function Show-Help {
     Write-Host ""
-    Write-Host "TaskFlow - Available Commands" -ForegroundColor White
+    Write-Host "Celestask - Available Commands" -ForegroundColor White
     Write-Host "=============================" -ForegroundColor White
     Write-Host ""
     Write-Host "  Install-All        - Install all dependencies (root + server + client)" -ForegroundColor Yellow

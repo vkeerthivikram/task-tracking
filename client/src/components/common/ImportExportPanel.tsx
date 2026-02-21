@@ -6,7 +6,7 @@ import { api } from '../../services/api';
 import type { ExportStatus, ImportPayload, ImportResult, ImportMode } from '../../types';
 
 // LocalStorage key for last export date
-const LAST_EXPORT_KEY = 'taskflow-last-export';
+const LAST_EXPORT_KEY = 'celestask-last-export';
 
 /**
  * Format number with commas for display

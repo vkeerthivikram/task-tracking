@@ -679,7 +679,7 @@ export async function exportData(): Promise<void> {
   
   // Extract filename from Content-Disposition header
   const contentDisposition = response.headers.get('Content-Disposition');
-  let filename = 'taskflow-export.json';
+  let filename = 'celestask-export.json';
   if (contentDisposition) {
     const filenameMatch = contentDisposition.match(/filename="?(.+?)"?(?:;|$)/);
     if (filenameMatch) {
@@ -713,7 +713,7 @@ export async function exportSqlite(): Promise<void> {
   
   // Extract filename from Content-Disposition header
   const contentDisposition = response.headers.get('Content-Disposition');
-  let filename = 'taskflow-backup.db';
+  let filename = 'celestask-backup.db';
   if (contentDisposition) {
     const filenameMatch = contentDisposition.match(/filename="?(.+?)"?(?:;|$)/);
     if (filenameMatch) {

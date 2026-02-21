@@ -4,7 +4,7 @@ import { Providers } from './providers';
 import { GlobalUI } from './global-ui';
 
 export const metadata: Metadata = {
-  title: 'TaskTrack',
+  title: 'Celestask',
   description: 'Local-first project and task management',
 };
 
@@ -13,7 +13,7 @@ const darkModeScript = `
 (function() {
   const storedTheme = localStorage.getItem('theme');
   const darkThemes = new Set([
-    'taskflow-dark',
+    'celestask-dark',
     'catppuccin-frappe',
     'catppuccin-macchiato',
     'catppuccin-mocha',
@@ -33,7 +33,7 @@ const darkModeScript = `
     ? darkThemes.has(theme)
     : (legacyDarkMode !== null ? JSON.parse(legacyDarkMode) : prefersDark);
 
-  const resolvedTheme = theme || (isDark ? 'taskflow-dark' : 'taskflow-light');
+  const resolvedTheme = theme || (isDark ? 'celestask-dark' : 'celestask-light');
   document.documentElement.setAttribute('data-theme', resolvedTheme);
 
   if (isDark) {
