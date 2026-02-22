@@ -14,12 +14,18 @@ import {
   ChevronRight,
   X,
   Users,
+  Timer,
+  Play,
+  Pause,
+  Square,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useProjects } from '../../context/ProjectContext';
+import { usePomodoro } from '../../context/PomodoroContext';
 import type { Project, ViewType } from '../../types';
 import { AppContextMenu, type AppContextMenuItem } from '../common/AppContextMenu';
 import { Logo } from '../ui/Logo';
+import { breakdownUs } from '../../utils/timeFormat';
 
 interface SidebarProps {
   onAddProject?: () => void;
@@ -40,6 +46,18 @@ export function Sidebar({ onAddProject }: SidebarProps) {
   const pathname = usePathname();
   const { sidebarOpen, setSidebarOpen, currentView, setCurrentView, setCurrentProjectId, openSubProjectModal, openProjectModal } = useApp();
   const { projects, currentProject, setCurrentProject, deleteProject } = useProjects();
+  const {
+    currentSession,
+    dailyStats,
+    isRunning,
+    isPaused,
+    isIdle,
+    remainingTimeUs,
+    startSession,
+    pauseSession,
+    resumeSession,
+    stopSession,
+  } = usePomodoro();
   const sidebarRef = useRef<HTMLElement>(null);
   const [contextMenuState, setContextMenuState] = useState<{ x: number; y: number; project: Project } | null>(null);
 
@@ -157,6 +175,23 @@ export function Sidebar({ onAddProject }: SidebarProps) {
 
   // Check if we're on the people page
   const isPeoplePage = pathname?.startsWith('/people') ?? false;
+
+  // Format remaining time for display
+  const formatPomodoroTime = (us: number): string => {
+    const { minutes, seconds } = breakdownUs(us);
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  };
+
+  // Handle Pomodoro button click
+  const handlePomodoroAction = () => {
+    if (isRunning) {
+      pauseSession();
+    } else if (isPaused) {
+      resumeSession();
+    } else {
+      startSession(undefined, 'work');
+    }
+  };
 
   const sidebarContent = (
     <>
@@ -318,6 +353,110 @@ export function Sidebar({ onAddProject }: SidebarProps) {
               );
             })}
           </nav>
+        )}
+      </div>
+
+      {/* Pomodoro Timer Section */}
+      <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+            Pomodoro
+          </h3>
+          <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+            <Timer className="w-3 h-3" />
+            <span>{dailyStats?.work_sessions_completed ?? 0} today</span>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {/* Timer Display */}
+          <div className={twMerge(
+            clsx(
+              'flex-1 flex items-center justify-between px-3 py-2 rounded-md',
+              'bg-gray-100 dark:bg-gray-700',
+              isRunning && 'bg-red-50 dark:bg-red-900/20',
+              isPaused && 'bg-amber-50 dark:bg-amber-900/20'
+            )
+          )}>
+            <div className="flex items-center gap-2">
+              <Timer className={twMerge(
+                clsx(
+                  'w-4 h-4',
+                  isRunning && 'text-red-500 animate-pulse',
+                  isPaused && 'text-amber-500',
+                  isIdle && 'text-gray-400'
+                )
+              )} />
+              <span className={twMerge(
+                clsx(
+                  'text-sm font-mono',
+                  isRunning && 'text-red-600 dark:text-red-400',
+                  isPaused && 'text-amber-600 dark:text-amber-400',
+                  isIdle && 'text-gray-500 dark:text-gray-400'
+                )
+              )}>
+                {formatPomodoroTime(remainingTimeUs)}
+              </span>
+            </div>
+            
+            {/* Control Buttons */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handlePomodoroAction}
+                className={twMerge(
+                  clsx(
+                    'p-1 rounded transition-colors',
+                    isRunning ? 'text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30' :
+                    isPaused ? 'text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30' :
+                    'text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30'
+                  )
+                )}
+                title={isRunning ? 'Pause' : isPaused ? 'Resume' : 'Start'}
+              >
+                {isRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+              </button>
+              
+              {(isRunning || isPaused) && (
+                <button
+                  onClick={stopSession}
+                  className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                  title="Stop"
+                >
+                  <Square className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Session Type Indicator */}
+        {(isRunning || isPaused) && currentSession && (
+          <div className="mt-2 text-xs text-center text-gray-500 dark:text-gray-400">
+            {currentSession.session_type === 'work' ? '🎯 Focus time' :
+             currentSession.session_type === 'short_break' ? '☕ Short break' :
+             '🌴 Long break'}
+            {currentSession.task_id && (
+              <span className="ml-1 text-gray-400 dark:text-gray-500">
+                (Task #{currentSession.task_id})
+              </span>
+            )}
+          </div>
+        )}
+        
+        {/* Daily Goal Progress */}
+        {dailyStats && dailyStats.goal_progress_percent > 0 && (
+          <div className="mt-2">
+            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+              <span>Daily goal</span>
+              <span>{Math.round(dailyStats.goal_progress_percent)}%</span>
+            </div>
+            <div className="h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-green-400 to-green-500 transition-all duration-300"
+                style={{ width: `${Math.min(100, dailyStats.goal_progress_percent)}%` }}
+              />
+            </div>
+          </div>
         )}
       </div>
 

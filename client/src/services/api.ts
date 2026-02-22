@@ -45,6 +45,11 @@ import type {
   CreateTimeEntryDTO,
   StartTimerDTO,
   UpdateTimeEntryDTO,
+  PomodoroSettings,
+  PomodoroSession,
+  PomodoroDailyStats,
+  StartPomodoroDTO,
+  UpdatePomodoroSettingsDTO,
 } from '../types';
 
 const API_BASE_URL = '/api';
@@ -901,6 +906,131 @@ export async function stopAllTimers(): Promise<{ stopped_count: number; stopped_
   return handleResponse<{ stopped_count: number; stopped_ids: string[] }>(response);
 }
 
+// ============ Pomodoro API ============
+
+/**
+ * Get Pomodoro settings
+ */
+export async function getPomodoroSettings(): Promise<PomodoroSettings> {
+  const response = await fetch(`${API_BASE_URL}/pomodoro/settings`);
+  return handleResponse<PomodoroSettings>(response);
+}
+
+/**
+ * Update Pomodoro settings
+ */
+export async function updatePomodoroSettings(data: UpdatePomodoroSettingsDTO): Promise<PomodoroSettings> {
+  const response = await fetch(`${API_BASE_URL}/pomodoro/settings`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return handleResponse<PomodoroSettings>(response);
+}
+
+/**
+ * Get current Pomodoro session (running or paused)
+ */
+export async function getCurrentPomodoro(): Promise<PomodoroSession | null> {
+  const response = await fetch(`${API_BASE_URL}/pomodoro/current`);
+  return handleResponse<PomodoroSession | null>(response);
+}
+
+/**
+ * Start a new Pomodoro session
+ */
+export async function startPomodoro(data?: StartPomodoroDTO): Promise<PomodoroSession> {
+  const response = await fetch(`${API_BASE_URL}/pomodoro/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data || {}),
+  });
+  return handleResponse<PomodoroSession>(response);
+}
+
+/**
+ * Pause the current Pomodoro session
+ */
+export async function pausePomodoro(): Promise<PomodoroSession> {
+  const response = await fetch(`${API_BASE_URL}/pomodoro/pause`, {
+    method: 'POST',
+  });
+  return handleResponse<PomodoroSession>(response);
+}
+
+/**
+ * Resume the paused Pomodoro session
+ */
+export async function resumePomodoro(): Promise<PomodoroSession> {
+  const response = await fetch(`${API_BASE_URL}/pomodoro/resume`, {
+    method: 'POST',
+  });
+  return handleResponse<PomodoroSession>(response);
+}
+
+/**
+ * Stop and discard the current Pomodoro session
+ */
+export async function stopPomodoro(): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE_URL}/pomodoro/stop`, {
+    method: 'POST',
+  });
+  return handleResponse<{ message: string }>(response);
+}
+
+/**
+ * Complete the current Pomodoro session
+ */
+export async function completePomodoro(): Promise<PomodoroSession> {
+  const response = await fetch(`${API_BASE_URL}/pomodoro/complete`, {
+    method: 'POST',
+  });
+  return handleResponse<PomodoroSession>(response);
+}
+
+/**
+ * Skip the current break and start a work session
+ */
+export async function skipPomodoro(): Promise<PomodoroSession> {
+  const response = await fetch(`${API_BASE_URL}/pomodoro/skip`, {
+    method: 'POST',
+  });
+  return handleResponse<PomodoroSession>(response);
+}
+
+/**
+ * Get Pomodoro sessions history
+ */
+export async function getPomodoroSessions(params?: {
+  task_id?: number;
+  date?: string;
+  limit?: number;
+}): Promise<PomodoroSession[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.task_id !== undefined) {
+    searchParams.append('task_id', params.task_id.toString());
+  }
+  if (params?.date) {
+    searchParams.append('date', params.date);
+  }
+  if (params?.limit !== undefined) {
+    searchParams.append('limit', params.limit.toString());
+  }
+  const queryString = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  
+  const response = await fetch(`${API_BASE_URL}/pomodoro/sessions${queryString}`);
+  return handleResponse<PomodoroSession[]>(response);
+}
+
+/**
+ * Get Pomodoro daily stats
+ */
+export async function getPomodoroStats(date?: string): Promise<PomodoroDailyStats> {
+  const queryString = date ? `?date=${date}` : '';
+  const response = await fetch(`${API_BASE_URL}/pomodoro/stats${queryString}`);
+  return handleResponse<PomodoroDailyStats>(response);
+}
+
 // Export all functions as a unified API object
 export const api = {
   projects: {
@@ -1006,6 +1136,19 @@ export const api = {
     delete: deleteTimeEntry,
     getRunning: getRunningTimers,
     stopAll: stopAllTimers,
+  },
+  pomodoro: {
+    getSettings: getPomodoroSettings,
+    updateSettings: updatePomodoroSettings,
+    getCurrent: getCurrentPomodoro,
+    start: startPomodoro,
+    pause: pausePomodoro,
+    resume: resumePomodoro,
+    stop: stopPomodoro,
+    complete: completePomodoro,
+    skip: skipPomodoro,
+    getSessions: getPomodoroSessions,
+    getStats: getPomodoroStats,
   },
 };
 

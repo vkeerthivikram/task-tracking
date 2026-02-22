@@ -16,6 +16,7 @@ const customFieldsRouter = require('./routes/customFields');
 const savedViewsRouter = require('./routes/savedViews');
 const importExportRouter = require('./routes/importExport');
 const timeEntriesRouter = require('./routes/timeEntries');
+const pomodoroRouter = require('./routes/pomodoro');
 
 // Initialize Express app
 const app = express();
@@ -56,6 +57,7 @@ app.use('/api/saved-views', savedViewsRouter);
 app.use('/api/export', importExportRouter);
 app.use('/api/import', importExportRouter);
 app.use('/api/time-entries', timeEntriesRouter);
+app.use('/api/pomodoro', pomodoroRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

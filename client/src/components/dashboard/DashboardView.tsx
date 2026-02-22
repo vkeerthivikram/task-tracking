@@ -11,6 +11,9 @@ import {
   AlertTriangle,
   ClipboardList,
   Activity,
+  Timer,
+  Play,
+  Target,
 } from 'lucide-react';
 import {
   PieChart,
@@ -30,6 +33,7 @@ import {
 import { useTasks } from '../../context/TaskContext';
 import { useProjects } from '../../context/ProjectContext';
 import { useApp } from '../../context/AppContext';
+import { usePomodoro } from '../../context/PomodoroContext';
 import type { Task, TaskStatus, TaskPriority, CreateTaskDTO, UpdateTaskDTO } from '../../types';
 import { STATUS_CONFIG, PRIORITY_CONFIG } from '../../types';
 import { Modal } from '../common/Modal';
@@ -38,6 +42,7 @@ import { Card } from '../common/Card';
 import StatCard from './StatCard';
 import UpcomingDeadlines from './UpcomingDeadlines';
 import { AppContextMenu, type AppContextMenuItem } from '../common/AppContextMenu';
+import { formatDurationUsCompact } from '@/utils/timeFormat';
 
 // Chart colors
 const CHART_COLORS = {
@@ -56,6 +61,13 @@ export function DashboardView() {
   const { tasks, createTask, updateTask, deleteTask } = useTasks();
   const { currentProject } = useProjects();
   const { openSubTaskModal } = useApp();
+  const {
+    dailyStats,
+    isRunning: isPomodoroRunning,
+    currentSession,
+    remainingTimeUs,
+    startSession,
+  } = usePomodoro();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -257,6 +269,15 @@ export function DashboardView() {
     }
     return null;
   };
+  
+  // Format remaining time for Pomodoro display
+  const formatRemainingTime = (us: number | null) => {
+    if (!us) return '0:00';
+    const totalSeconds = Math.floor(us / 1000000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -289,6 +310,92 @@ export function DashboardView() {
           subtitle={stats.overdueTasks > 0 ? 'Needs attention' : 'All on track'}
         />
       </div>
+
+      {/* Pomodoro Stats Section */}
+      <Card variant="bordered" padding="lg">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            🍅 Pomodoro Focus
+          </h3>
+          <Timer className="w-5 h-5 text-gray-400" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Today's Sessions */}
+          <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+            <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <Timer className="w-6 h-6 text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Today's Sessions</p>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                {dailyStats?.work_sessions_completed || 0}
+              </p>
+            </div>
+          </div>
+          
+          {/* Focus Time */}
+          <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+            <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <Clock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Focus Time Today</p>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                {dailyStats?.work_time_us 
+                  ? formatDurationUsCompact(dailyStats.work_time_us)
+                  : '0m'}
+              </p>
+            </div>
+          </div>
+          
+          {/* Daily Goal Progress */}
+          <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+            <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+              <Target className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Daily Goal</p>
+              <div className="flex items-center gap-2">
+                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                  {Math.round(dailyStats?.goal_progress_percent || 0)}%
+                </p>
+              </div>
+              <div className="mt-1 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div 
+                  className="bg-green-500 h-2 rounded-full transition-all"
+                  style={{ width: `${Math.min(100, dailyStats?.goal_progress_percent || 0)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Quick Start Timer */}
+        {isPomodoroRunning && currentSession ? (
+          <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-sm font-medium text-red-700 dark:text-red-300">
+                  {currentSession.session_type === 'work' ? 'Work Session' : 
+                   currentSession.session_type === 'short_break' ? 'Short Break' : 'Long Break'}
+                </span>
+              </div>
+              <span className="text-2xl font-mono font-semibold text-red-600 dark:text-red-400">
+                {formatRemainingTime(remainingTimeUs)}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => startSession(undefined, 'work')}
+            className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+          >
+            <Play className="w-5 h-5" />
+            <span>Start Focus Session</span>
+          </button>
+        )}
+      </Card>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -625,3 +625,78 @@ export interface UpdateTimeEntryDTO {
   end_time?: string | null;
   duration_us?: number | null;
 }
+
+// ==================== v2.4.0 Pomodoro Timer ====================
+
+// Pomodoro Session Types
+export type PomodoroSessionType = 'work' | 'short_break' | 'long_break';
+
+// Pomodoro Timer State
+export type PomodoroTimerState = 'idle' | 'running' | 'paused';
+
+// Pomodoro Settings Interface
+export interface PomodoroSettings {
+  id: string;
+  work_duration_us: number;
+  short_break_us: number;
+  long_break_us: number;
+  sessions_until_long_break: number;
+  auto_start_breaks: boolean;
+  auto_start_work: boolean;
+  notifications_enabled: boolean;
+  daily_goal: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Pomodoro Session Interface
+export interface PomodoroSession {
+  id: string;
+  task_id: number | null;
+  session_type: PomodoroSessionType;
+  timer_state: PomodoroTimerState;
+  duration_us: number;
+  elapsed_us: number;
+  started_at: string | null;
+  paused_at: string | null;
+  ended_at: string | null;
+  completed: boolean;
+  interrupted: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Pomodoro Daily Stats Interface
+export interface PomodoroDailyStats {
+  date: string;
+  work_sessions_completed: number;
+  work_time_us: number;
+  short_breaks: number;
+  long_breaks: number;
+  goal_progress_percent: number;
+}
+
+// Start Pomodoro DTO
+export interface StartPomodoroDTO {
+  task_id?: number;
+  session_type?: PomodoroSessionType;
+}
+
+// Update Pomodoro Settings DTO
+export interface UpdatePomodoroSettingsDTO {
+  work_duration_us?: number;
+  short_break_us?: number;
+  long_break_us?: number;
+  sessions_until_long_break?: number;
+  auto_start_breaks?: boolean;
+  auto_start_work?: boolean;
+  notifications_enabled?: boolean;
+  daily_goal?: number;
+}
+
+// Pomodoro Session Type Configuration
+export const POMODORO_SESSION_CONFIG: Record<PomodoroSessionType, { label: string; color: string }> = {
+  work: { label: 'Work', color: '#ef4444' },
+  short_break: { label: 'Short Break', color: '#10b981' },
+  long_break: { label: 'Long Break', color: '#3b82f6' },
+};

@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Pencil, Trash2, Calendar, AlertCircle, Users, GitBranch, Check, Loader2, Plus, Play, Square } from 'lucide-react';
+import { Pencil, Trash2, Calendar, AlertCircle, Users, GitBranch, Check, Loader2, Plus, Play, Square, Timer } from 'lucide-react';
 import type { Task, TaskStatus, TaskPriority } from '../../types';
 import { StatusBadge, PriorityBadge, TagBadge } from '../common/Badge';
 import { Button } from '../common/Button';
@@ -11,6 +11,7 @@ import { MiniProgressBar } from '../common/ProgressBar';
 import { useTasks } from '../../context/TaskContext';
 import { AppContextMenu, type AppContextMenuItem } from '../common/AppContextMenu';
 import { useTimeEntries } from '@/context/TimeEntryContext';
+import { usePomodoro } from '@/context/PomodoroContext';
 import { formatDurationUsCompact, formatTimerDisplayUs } from '@/utils/timeFormat';
 
 interface TaskRowProps {
@@ -58,6 +59,7 @@ export function TaskRow({
   const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const [totalUs, setTotalUs] = useState(0);
   const [isTimerLoading, setIsTimerLoading] = useState(false);
+  const [isPomodoroLoading, setIsPomodoroLoading] = useState(false);
   
   const { updateTaskStatus, updateTask, updateTaskProgress } = useTasks();
   
@@ -70,7 +72,14 @@ export function TaskRow({
     fetchTaskTimeSummary,
   } = useTimeEntries();
   
+  const {
+    currentSession,
+    isRunning: isPomodoroRunning,
+    startSession,
+  } = usePomodoro();
+  
   const isTimerRunning = isTaskTimerRunning(task.id);
+  const isPomodoroForThisTask = currentSession?.task_id === task.id && isPomodoroRunning;
   const runningTimer = getRunningTimerForTask(task.id);
   
   useEffect(() => {
@@ -100,6 +109,22 @@ export function TaskRow({
       console.error('Timer action failed:', err);
     } finally {
       setIsTimerLoading(false);
+    }
+  };
+  
+  const handlePomodoroClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isPomodoroForThisTask) {
+      // Already running for this task, don't start another
+      return;
+    }
+    setIsPomodoroLoading(true);
+    try {
+      await startSession(task.id, 'work');
+    } catch (err) {
+      console.error('Pomodoro start failed:', err);
+    } finally {
+      setIsPomodoroLoading(false);
     }
   };
   
@@ -706,6 +731,29 @@ export function TaskRow({
               {totalUs > 0 ? formatDurationUsCompact(totalUs) : ''}
             </>
           )}
+        </button>
+      </td>
+
+      {/* Pomodoro */}
+      <td className="px-4 py-3">
+        <button
+          onClick={handlePomodoroClick}
+          disabled={isPomodoroLoading || isPomodoroForThisTask}
+          className={twMerge(clsx(
+            'flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors',
+            isPomodoroForThisTask
+              ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600',
+            (isPomodoroLoading || isPomodoroForThisTask) && 'opacity-50 cursor-wait'
+          ))}
+          title={isPomodoroForThisTask ? 'Pomodoro running' : 'Start Pomodoro'}
+          aria-label={isPomodoroForThisTask ? 'Pomodoro running' : 'Start Pomodoro'}
+        >
+          <Timer className={twMerge(clsx(
+            'w-3 h-3',
+            isPomodoroForThisTask && 'animate-pulse'
+          ))} />
+          <span>🍅</span>
         </button>
       </td>
 

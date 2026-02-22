@@ -342,6 +342,64 @@ function createTables() {
     console.error('Error migrating time_entries duration column:', error.message);
   }
 
+  // ==================== MIGRATION: Add v2.4.0 Pomodoro Timer ====================
+  
+  // Create pomodoro_settings table for user preferences
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS pomodoro_settings (
+        id TEXT PRIMARY KEY,
+        work_duration_us INTEGER NOT NULL DEFAULT 1500000000000,
+        short_break_us INTEGER NOT NULL DEFAULT 300000000000,
+        long_break_us INTEGER NOT NULL DEFAULT 900000000000,
+        sessions_until_long_break INTEGER NOT NULL DEFAULT 4,
+        auto_start_breaks INTEGER NOT NULL DEFAULT 0,
+        auto_start_work INTEGER NOT NULL DEFAULT 0,
+        notifications_enabled INTEGER NOT NULL DEFAULT 1,
+        daily_goal INTEGER DEFAULT 8,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // Insert default settings if not exists
+    db.exec(`
+      INSERT OR IGNORE INTO pomodoro_settings (id) VALUES ('default')
+    `);
+    
+    console.log('Created pomodoro_settings table');
+  } catch (error) {
+    console.error('Error creating pomodoro_settings table:', error.message);
+  }
+
+  // Create pomodoro_sessions table for session records
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS pomodoro_sessions (
+        id TEXT PRIMARY KEY,
+        task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+        session_type TEXT NOT NULL CHECK(session_type IN ('work', 'short_break', 'long_break')),
+        timer_state TEXT NOT NULL DEFAULT 'idle' CHECK(timer_state IN ('idle', 'running', 'paused')),
+        duration_us INTEGER NOT NULL,
+        elapsed_us INTEGER NOT NULL DEFAULT 0,
+        started_at DATETIME,
+        paused_at DATETIME,
+        ended_at DATETIME,
+        completed INTEGER NOT NULL DEFAULT 0,
+        interrupted INTEGER NOT NULL DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_task ON pomodoro_sessions(task_id)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_started ON pomodoro_sessions(started_at)`);
+    
+    console.log('Created pomodoro_sessions table');
+  } catch (error) {
+    console.error('Error creating pomodoro_sessions table:', error.message);
+  }
+
   console.log('Database tables created successfully');
 }
 

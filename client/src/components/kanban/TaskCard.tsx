@@ -6,12 +6,13 @@ import { CSS } from '@dnd-kit/utilities';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { format } from 'date-fns';
-import { Calendar, Users, GitBranch, Plus, Clock, Play, Square } from 'lucide-react';
+import { Calendar, Users, GitBranch, Plus, Clock, Play, Square, Timer } from 'lucide-react';
 import type { Task, TaskPriority } from '../../types';
 import { PriorityBadge, TagBadge } from '../common/Badge';
 import { MiniProgressBar } from '../common/ProgressBar';
 import { AppContextMenu, type AppContextMenuItem } from '../common/AppContextMenu';
 import { useTimeEntries } from '@/context/TimeEntryContext';
+import { usePomodoro } from '@/context/PomodoroContext';
 import { formatDurationUsCompact, formatTimerDisplayUs } from '@/utils/timeFormat';
 
 interface TaskCardProps {
@@ -32,6 +33,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, onCreateSubTa
   const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const [totalUs, setTotalUs] = useState(0);
   const [isTimerLoading, setIsTimerLoading] = useState(false);
+  const [isPomodoroLoading, setIsPomodoroLoading] = useState(false);
   
   const {
     timerTick,
@@ -42,8 +44,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, onCreateSubTa
     fetchTaskTimeSummary,
   } = useTimeEntries();
   
+  const {
+    currentSession,
+    isRunning: isPomodoroRunning,
+    startSession,
+  } = usePomodoro();
+  
   const isRunning = isTaskTimerRunning(task.id);
   const runningTimer = getRunningTimerForTask(task.id);
+  
+  // Check if Pomodoro is running for this specific task
+  const isPomodoroForThisTask = currentSession?.task_id === task.id && isPomodoroRunning;
   
   useEffect(() => {
     const fetchTime = async () => {
@@ -72,6 +83,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, onCreateSubTa
       console.error('Timer action failed:', err);
     } finally {
       setIsTimerLoading(false);
+    }
+  };
+  
+  const handlePomodoroClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isPomodoroForThisTask) {
+      // Already running for this task, don't start another
+      return;
+    }
+    setIsPomodoroLoading(true);
+    try {
+      await startSession(task.id, 'work');
+    } catch (err) {
+      console.error('Pomodoro start failed:', err);
+    } finally {
+      setIsPomodoroLoading(false);
     }
   };
   
@@ -198,6 +225,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, onCreateSubTa
           'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900',
           'hover:-translate-y-0.5',
           isRunning && 'ring-1 ring-green-500 dark:ring-green-400',
+          isPomodoroForThisTask && 'ring-1 ring-red-500 dark:ring-red-400 animate-pulse',
           isDragging && [
             'opacity-50 scale-[1.02] rotate-[2deg]',
             'shadow-xl border-primary-400 dark:border-primary-500',
@@ -308,6 +336,26 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, onCreateSubTa
                 {totalUs > 0 ? formatDurationUsCompact(totalUs) : 'Start'}
               </>
             )}
+          </button>
+          
+          {/* Pomodoro button */}
+          <button
+            onClick={handlePomodoroClick}
+            disabled={isPomodoroLoading || isPomodoroForThisTask}
+            className={twMerge(clsx(
+              'flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] transition-colors',
+              isPomodoroForThisTask 
+                ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' 
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600',
+              (isPomodoroLoading || isPomodoroForThisTask) && 'opacity-50 cursor-wait'
+            ))}
+            title={isPomodoroForThisTask ? 'Pomodoro running' : 'Start Pomodoro'}
+          >
+            <Timer className={twMerge(clsx(
+              'w-2.5 h-2.5',
+              isPomodoroForThisTask && 'animate-pulse'
+            ))} />
+            <span className="text-[10px]">🍅</span>
           </button>
 
           {/* End/Due date */}
