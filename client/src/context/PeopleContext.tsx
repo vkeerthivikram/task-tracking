@@ -1,8 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
+import React, { createContext, useContext, useMemo, useCallback, type ReactNode } from 'react';
 import type { Person, CreatePersonDTO, UpdatePersonDTO } from '../types';
 import * as api from '../services/api';
+import { createCrudContext } from './utils/createCrudContext';
 
 interface PeopleContextType {
   // State
@@ -23,6 +24,34 @@ interface PeopleContextType {
   getPersonById: (id: number) => Person | undefined;
 }
 
+// Utility function to filter people by project
+function filterByProject(people: Person[], projectId: number | null | undefined): Person[] {
+  if (!projectId) {
+    return people;
+  }
+  return people.filter(p => p.project_id === undefined || p.project_id === null || p.project_id === projectId);
+}
+
+// Wrapper functions to adapt API signatures to factory expectations
+const personApi = {
+  fetchAll: api.getPeople,
+  fetchOne: (id: string | number) => api.getPerson(Number(id)),
+  create: api.createPerson,
+  update: (id: string | number, data: UpdatePersonDTO) => api.updatePerson(Number(id), data),
+  delete: (id: string | number) => api.deletePerson(Number(id)),
+};
+
+// Create the base CRUD context using the factory
+const { Provider: BaseProvider, useHook: useBasePeople, Context: BasePeopleContext } = createCrudContext<Person, CreatePersonDTO, UpdatePersonDTO>({
+  entityName: 'person',
+  fetchAll: personApi.fetchAll,
+  fetchOne: personApi.fetchOne,
+  create: personApi.create,
+  update: personApi.update,
+  delete: personApi.delete,
+});
+
+// Create the extended context for additional functionality
 const PeopleContext = createContext<PeopleContextType | undefined>(undefined);
 
 interface PeopleProviderProps {
@@ -30,127 +59,56 @@ interface PeopleProviderProps {
   projectId?: number | null;
 }
 
-export function PeopleProvider({ children, projectId }: PeopleProviderProps) {
-  const [people, setPeople] = useState<Person[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+/**
+ * Internal component that extends the base CRUD context with project-specific functionality.
+ * Must be used inside BaseProvider.
+ */
+function PeopleProviderInner({ children, projectId }: PeopleProviderProps) {
+  // Get base CRUD functionality
+  const { 
+    items: people, 
+    loading, 
+    error, 
+    fetchAll: fetchPeople, 
+    create: baseCreatePerson, 
+    update: baseUpdatePerson, 
+    delete: baseDeletePerson,
+    clearError,
+    getById: baseGetPersonById,
+  } = useBasePeople();
   
-  // Filter people by current project
+  // Filter people by current project using the utility
   const projectPeople = useMemo(() => {
-    if (!projectId) {
-      // Return all people (global + current project's people)
-      return people;
-    }
-    // Return global people (no project_id) + people assigned to current project
-    return people.filter(p => p.project_id === undefined || p.project_id === null || p.project_id === projectId);
+    return filterByProject(people, projectId);
   }, [people, projectId]);
   
-  // Fetch all people
-  const fetchPeople = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const data = await api.getPeople();
-      setPeople(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch people');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  
-  // Fetch people by project
+  // Fetch people by project - uses the base fetchPeople which refreshes all data
+  // The projectPeople computed property will filter appropriately
   const fetchPeopleByProject = useCallback(async (projId: number) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const data = await api.getPeople(projId);
-      // Merge with existing people to avoid duplicates
-      setPeople(prev => {
-        const existingIds = new Set(prev.map(p => p.id));
-        const newPeople = data.filter(p => !existingIds.has(p.id));
-        return [...prev, ...newPeople];
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch people');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  
-  // Create a new person
-  const createPerson = useCallback(async (data: CreatePersonDTO): Promise<Person> => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const newPerson = await api.createPerson(data);
-      setPeople(prev => [...prev, newPerson]);
-      return newPerson;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create person';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  
-  // Update an existing person
-  const updatePerson = useCallback(async (id: number, data: UpdatePersonDTO): Promise<Person> => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const updatedPerson = await api.updatePerson(id, data);
-      setPeople(prev => 
-        prev.map(p => p.id === id ? updatedPerson : p)
-      );
-      return updatedPerson;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update person';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  
-  // Delete a person
-  const deletePerson = useCallback(async (id: number): Promise<void> => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      await api.deletePerson(id);
-      setPeople(prev => prev.filter(p => p.id !== id));
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete person';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  
-  // Clear error
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
-  
-  // Get person by ID
-  const getPersonById = useCallback((id: number): Person | undefined => {
-    return people.find(p => p.id === id);
-  }, [people]);
-  
-  // Fetch people on mount
-  useEffect(() => {
-    fetchPeople();
+    // Fetch with project filter from API
+    await api.getPeople(projId);
+    // Then refresh local state via base fetch
+    await fetchPeople();
   }, [fetchPeople]);
   
-  const value: PeopleContextType = {
+  // Map factory methods to existing interface names
+  const createPerson = useCallback(async (data: CreatePersonDTO): Promise<Person> => {
+    return baseCreatePerson(data);
+  }, [baseCreatePerson]);
+  
+  const updatePerson = useCallback(async (id: number, data: UpdatePersonDTO): Promise<Person> => {
+    return baseUpdatePerson(id, data);
+  }, [baseUpdatePerson]);
+  
+  const deletePerson = useCallback(async (id: number): Promise<void> => {
+    return baseDeletePerson(id);
+  }, [baseDeletePerson]);
+  
+  const getPersonById = useCallback((id: number): Person | undefined => {
+    return baseGetPersonById(id);
+  }, [baseGetPersonById]);
+  
+  const value: PeopleContextType = useMemo(() => ({
     people,
     projectPeople,
     loading,
@@ -162,12 +120,38 @@ export function PeopleProvider({ children, projectId }: PeopleProviderProps) {
     deletePerson,
     clearError,
     getPersonById,
-  };
+  }), [
+    people,
+    projectPeople,
+    loading,
+    error,
+    fetchPeople,
+    fetchPeopleByProject,
+    createPerson,
+    updatePerson,
+    deletePerson,
+    clearError,
+    getPersonById,
+  ]);
   
   return (
     <PeopleContext.Provider value={value}>
       {children}
     </PeopleContext.Provider>
+  );
+}
+
+/**
+ * PeopleProvider - Provides people context with CRUD operations and project filtering.
+ * Wraps the base CRUD provider internally for self-contained usage.
+ */
+export function PeopleProvider({ children, projectId }: PeopleProviderProps) {
+  return (
+    <BaseProvider>
+      <PeopleProviderInner projectId={projectId}>
+        {children}
+      </PeopleProviderInner>
+    </BaseProvider>
   );
 }
 

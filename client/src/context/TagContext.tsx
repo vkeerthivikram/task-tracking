@@ -1,8 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
+import React, { createContext, useContext, useMemo, useCallback, type ReactNode } from 'react';
+import { createCrudContext } from './utils/createCrudContext';
 import type { Tag, CreateTagDTO, UpdateTagDTO } from '../types';
 import * as api from '../services/api';
+import { filterByProject } from '../utils/filterByProject';
 
 interface TagContextType {
   // State
@@ -23,6 +25,17 @@ interface TagContextType {
   getTagById: (id: number) => Tag | undefined;
 }
 
+// Create base CRUD context
+const { Provider: BaseProvider, useHook: useBaseHook, Context } = createCrudContext<Tag, CreateTagDTO, UpdateTagDTO>({
+  entityName: 'tag',
+  fetchAll: api.getTags,
+  fetchOne: (id: string | number) => api.getTag(Number(id)),
+  create: api.createTag,
+  update: (id: string | number, data: UpdateTagDTO) => api.updateTag(Number(id), data),
+  delete: (id: string | number) => api.deleteTag(Number(id)),
+});
+
+// Create extended context for additional functionality
 const TagContext = createContext<TagContextType | undefined>(undefined);
 
 interface TagProviderProps {
@@ -30,139 +43,66 @@ interface TagProviderProps {
   projectId?: number | null;
 }
 
-export function TagProvider({ children, projectId }: TagProviderProps) {
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
+function TagProvider({ children, projectId }: TagProviderProps) {
+  return (
+    <BaseProvider>
+      <TagProviderInner projectId={projectId}>
+        {children}
+      </TagProviderInner>
+    </BaseProvider>
+  );
+}
+
+function TagProviderInner({ children, projectId }: TagProviderProps) {
+  const base = useBaseHook();
+
   // Filter tags available for current project (global + project-specific)
   const availableTags = useMemo(() => {
-    if (!projectId) {
-      return tags;
-    }
-    // Return global tags (no project_id) + tags assigned to current project
-    return tags.filter(t => t.project_id === undefined || t.project_id === null || t.project_id === projectId);
-  }, [tags, projectId]);
-  
-  // Fetch all tags
-  const fetchTags = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const data = await api.getTags();
-      setTags(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch tags');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  
-  // Fetch available tags for a project
+    return filterByProject(base.items, projectId);
+  }, [base.items, projectId]);
+
+  // Fetch available tags for a specific project
+  // This refetches all tags to ensure state consistency
+  // (The API with project_id returns global + project-specific tags)
   const fetchAvailableTags = useCallback(async (projId: number) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const data = await api.getTags(projId);
-      // Merge with existing tags to avoid duplicates
-      setTags(prev => {
-        const existingIds = new Set(prev.map(t => t.id));
-        const newTags = data.filter(t => !existingIds.has(t.id));
-        return [...prev, ...newTags];
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch tags');
-    } finally {
-      setLoading(false);
+    // Fetch project-specific tags and merge with existing
+    const data = await api.getTags(projId);
+    const existingIds = new Set(base.items.map(t => t.id));
+    const newTags = data.filter(t => !existingIds.has(t.id));
+
+    // If we found new tags, refetch all to get complete state
+    // This ensures consistency while avoiding manual state manipulation
+    if (newTags.length > 0) {
+      await base.fetchAll();
     }
-  }, []);
-  
-  // Create a new tag
-  const createTag = useCallback(async (data: CreateTagDTO): Promise<Tag> => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const newTag = await api.createTag(data);
-      setTags(prev => [...prev, newTag]);
-      return newTag;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create tag';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  
-  // Update an existing tag
-  const updateTag = useCallback(async (id: number, data: UpdateTagDTO): Promise<Tag> => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const updatedTag = await api.updateTag(id, data);
-      setTags(prev => 
-        prev.map(t => t.id === id ? updatedTag : t)
-      );
-      return updatedTag;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update tag';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  
-  // Delete a tag
-  const deleteTag = useCallback(async (id: number): Promise<void> => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      await api.deleteTag(id);
-      setTags(prev => prev.filter(t => t.id !== id));
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete tag';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  
-  // Clear error
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
-  
-  // Get tag by ID
-  const getTagById = useCallback((id: number): Tag | undefined => {
-    return tags.find(t => t.id === id);
-  }, [tags]);
-  
-  // Fetch tags on mount
-  useEffect(() => {
-    fetchTags();
-  }, [fetchTags]);
-  
-  const value: TagContextType = {
-    tags,
+  }, [base.items, base.fetchAll]);
+
+  const value: TagContextType = useMemo(() => ({
+    tags: base.items,
     availableTags,
-    loading,
-    error,
-    fetchTags,
+    loading: base.loading,
+    error: base.error,
+    fetchTags: base.fetchAll,
     fetchAvailableTags,
-    createTag,
-    updateTag,
-    deleteTag,
-    clearError,
-    getTagById,
-  };
-  
+    createTag: base.create,
+    updateTag: base.update,
+    deleteTag: base.delete,
+    clearError: base.clearError,
+    getTagById: base.getById,
+  }), [
+    base.items,
+    base.loading,
+    base.error,
+    base.fetchAll,
+    base.create,
+    base.update,
+    base.delete,
+    base.clearError,
+    base.getById,
+    availableTags,
+    fetchAvailableTags,
+  ]);
+
   return (
     <TagContext.Provider value={value}>
       {children}
@@ -178,4 +118,5 @@ export function useTags(): TagContextType {
   return context;
 }
 
+export { TagProvider };
 export default TagContext;

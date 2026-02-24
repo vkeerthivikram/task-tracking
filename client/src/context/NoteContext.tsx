@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react';
 import type { Note, CreateNoteDTO, UpdateNoteDTO, NoteEntityType } from '../types';
 import * as api from '../services/api';
 
@@ -14,6 +14,7 @@ interface NoteContextType {
   updateNote: (id: number, data: UpdateNoteDTO) => Promise<Note>;
   deleteNote: (id: number) => Promise<void>;
   clearNotes: () => void;
+  clearError: () => void;
 }
 
 const NoteContext = createContext<NoteContextType | undefined>(undefined);
@@ -48,7 +49,7 @@ export function NoteProvider({ children }: NoteProviderProps) {
     setError(null);
     try {
       const newNote = await api.createNote(data);
-      setNotes((prev) => [...prev, newNote]);
+      setNotes(prev => [...prev, newNote]);
       return newNote;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create note';
@@ -64,9 +65,7 @@ export function NoteProvider({ children }: NoteProviderProps) {
     setError(null);
     try {
       const updatedNote = await api.updateNote(id, data);
-      setNotes((prev) =>
-        prev.map((note) => (note.id === id ? updatedNote : note))
-      );
+      setNotes(prev => prev.map(note => note.id === id ? updatedNote : note));
       return updatedNote;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update note';
@@ -82,7 +81,7 @@ export function NoteProvider({ children }: NoteProviderProps) {
     setError(null);
     try {
       await api.deleteNote(id);
-      setNotes((prev) => prev.filter((note) => note.id !== id));
+      setNotes(prev => prev.filter(note => note.id !== id));
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete note';
       setError(errorMessage);
@@ -98,7 +97,9 @@ export function NoteProvider({ children }: NoteProviderProps) {
     setError(null);
   }, []);
 
-  const value: NoteContextType = {
+  const clearError = useCallback(() => setError(null), []);
+
+  const value: NoteContextType = useMemo(() => ({
     notes,
     loading,
     error,
@@ -108,7 +109,19 @@ export function NoteProvider({ children }: NoteProviderProps) {
     updateNote,
     deleteNote,
     clearNotes,
-  };
+    clearError,
+  }), [
+    notes,
+    loading,
+    error,
+    currentEntity,
+    fetchNotes,
+    createNote,
+    updateNote,
+    deleteNote,
+    clearNotes,
+    clearError,
+  ]);
 
   return <NoteContext.Provider value={value}>{children}</NoteContext.Provider>;
 }

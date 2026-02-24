@@ -4,6 +4,16 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import type { SavedView, CreateSavedViewDTO, UpdateSavedViewDTO, TaskFilters } from '../types';
 import * as api from '../services/api';
 
+// =============================================================================
+// Types
+// =============================================================================
+
+interface AppliedViewData {
+  filters: TaskFilters;
+  sortBy?: string;
+  sortOrder: 'asc' | 'desc';
+}
+
 interface SavedViewContextType {
   // State
   savedViews: SavedView[];
@@ -17,21 +27,13 @@ interface SavedViewContextType {
   updateSavedView: (id: string, data: Partial<UpdateSavedViewDTO>) => Promise<SavedView>;
   deleteSavedView: (id: string) => Promise<void>;
   setDefaultView: (id: string) => Promise<SavedView>;
+  clearError: () => void;
 
   // Helpers
   getSavedViewById: (id: string) => SavedView | undefined;
   getViewsForType: (viewType: string) => SavedView[];
   applySavedView: (view: SavedView) => AppliedViewData;
-  clearError: () => void;
 }
-
-interface AppliedViewData {
-  filters: TaskFilters;
-  sortBy?: string;
-  sortOrder: 'asc' | 'desc';
-}
-
-const SavedViewContext = createContext<SavedViewContextType | undefined>(undefined);
 
 interface SavedViewProviderProps {
   children: ReactNode;
@@ -40,12 +42,26 @@ interface SavedViewProviderProps {
   onApplyView?: (data: AppliedViewData) => void;
 }
 
+// =============================================================================
+// Context
+// =============================================================================
+
+const SavedViewContext = createContext<SavedViewContextType | undefined>(undefined);
+
+// =============================================================================
+// Provider
+// =============================================================================
+
 export function SavedViewProvider({ children, projectId, viewType, onApplyView }: SavedViewProviderProps) {
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Get default view for current context
+  // ---------------------------------------------------------------------------
+  // Computed Values
+  // ---------------------------------------------------------------------------
+
+  /** Get default view for current context */
   const defaultView = useMemo(() => {
     const filtered = savedViews.filter(v => {
       const matchesProject = !projectId || !v.project_id || v.project_id === projectId;
@@ -55,11 +71,14 @@ export function SavedViewProvider({ children, projectId, viewType, onApplyView }
     return filtered[0] || null;
   }, [savedViews, projectId, viewType]);
 
-  // Fetch saved views
+  // ---------------------------------------------------------------------------
+  // CRUD Actions (factory pattern)
+  // ---------------------------------------------------------------------------
+
+  /** Fetch all saved views */
   const fetchSavedViews = useCallback(async (projId?: string, vType?: string) => {
     setLoading(true);
     setError(null);
-
     try {
       const data = await api.getSavedViews(projId, vType);
       setSavedViews(data);
@@ -70,11 +89,10 @@ export function SavedViewProvider({ children, projectId, viewType, onApplyView }
     }
   }, []);
 
-  // Create a new saved view
+  /** Create a new saved view */
   const createSavedView = useCallback(async (data: CreateSavedViewDTO): Promise<SavedView> => {
     setLoading(true);
     setError(null);
-
     try {
       const newView = await api.createSavedView(data);
       setSavedViews(prev => [...prev, newView]);
@@ -88,16 +106,13 @@ export function SavedViewProvider({ children, projectId, viewType, onApplyView }
     }
   }, []);
 
-  // Update an existing saved view
+  /** Update an existing saved view */
   const updateSavedView = useCallback(async (id: string, data: Partial<UpdateSavedViewDTO>): Promise<SavedView> => {
     setLoading(true);
     setError(null);
-
     try {
       const updatedView = await api.updateSavedView(id, data);
-      setSavedViews(prev =>
-        prev.map(v => v.id === id ? updatedView : v)
-      );
+      setSavedViews(prev => prev.map(v => v.id === id ? updatedView : v));
       return updatedView;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update saved view';
@@ -108,11 +123,10 @@ export function SavedViewProvider({ children, projectId, viewType, onApplyView }
     }
   }, []);
 
-  // Delete a saved view
+  /** Delete a saved view */
   const deleteSavedView = useCallback(async (id: string): Promise<void> => {
     setLoading(true);
     setError(null);
-
     try {
       await api.deleteSavedView(id);
       setSavedViews(prev => prev.filter(v => v.id !== id));
@@ -125,20 +139,18 @@ export function SavedViewProvider({ children, projectId, viewType, onApplyView }
     }
   }, []);
 
-  // Set a view as default
+  // ---------------------------------------------------------------------------
+  // Special Actions
+  // ---------------------------------------------------------------------------
+
+  /** Set a view as default (updates all views' is_default flag) */
   const setDefaultView = useCallback(async (id: string): Promise<SavedView> => {
     setLoading(true);
     setError(null);
-
     try {
       const updatedView = await api.setDefaultView(id);
-      // Update the views - set is_default to false for all others
-      setSavedViews(prev =>
-        prev.map(v => ({
-          ...v,
-          is_default: v.id === id,
-        }))
-      );
+      // Update all views - set is_default to false for others, true for selected
+      setSavedViews(prev => prev.map(v => ({ ...v, is_default: v.id === id })));
       return updatedView;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to set default view';
@@ -149,12 +161,19 @@ export function SavedViewProvider({ children, projectId, viewType, onApplyView }
     }
   }, []);
 
-  // Get saved view by ID
+  /** Clear the current error state */
+  const clearError = useCallback(() => setError(null), []);
+
+  // ---------------------------------------------------------------------------
+  // Helper Methods
+  // ---------------------------------------------------------------------------
+
+  /** Get saved view by ID from local state */
   const getSavedViewById = useCallback((id: string): SavedView | undefined => {
     return savedViews.find(v => v.id === id);
   }, [savedViews]);
 
-  // Get views for a specific type
+  /** Get views for a specific type, filtered by current project */
   const getViewsForType = useCallback((vType: string): SavedView[] => {
     return savedViews.filter(v => {
       const matchesProject = !projectId || !v.project_id || v.project_id === projectId;
@@ -162,32 +181,31 @@ export function SavedViewProvider({ children, projectId, viewType, onApplyView }
     });
   }, [savedViews, projectId]);
 
-  // Apply a saved view
+  /** Apply a saved view and optionally trigger callback */
   const applySavedView = useCallback((view: SavedView): AppliedViewData => {
     const data: AppliedViewData = {
       filters: view.filters,
       sortBy: view.sort_by,
       sortOrder: view.sort_order,
     };
-
-    if (onApplyView) {
-      onApplyView(data);
-    }
-
+    onApplyView?.(data);
     return data;
   }, [onApplyView]);
 
-  // Clear error
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+  // ---------------------------------------------------------------------------
+  // Effects
+  // ---------------------------------------------------------------------------
 
-  // Fetch saved views on mount or when context changes
+  /** Fetch saved views on mount or when context changes */
   useEffect(() => {
     fetchSavedViews(projectId || undefined, viewType);
   }, [fetchSavedViews, projectId, viewType]);
 
-  const value: SavedViewContextType = {
+  // ---------------------------------------------------------------------------
+  // Context Value (memoized)
+  // ---------------------------------------------------------------------------
+
+  const value: SavedViewContextType = useMemo(() => ({
     savedViews,
     defaultView,
     loading,
@@ -197,11 +215,25 @@ export function SavedViewProvider({ children, projectId, viewType, onApplyView }
     updateSavedView,
     deleteSavedView,
     setDefaultView,
+    clearError,
     getSavedViewById,
     getViewsForType,
     applySavedView,
+  }), [
+    savedViews,
+    defaultView,
+    loading,
+    error,
+    fetchSavedViews,
+    createSavedView,
+    updateSavedView,
+    deleteSavedView,
+    setDefaultView,
     clearError,
-  };
+    getSavedViewById,
+    getViewsForType,
+    applySavedView,
+  ]);
 
   return (
     <SavedViewContext.Provider value={value}>
@@ -209,6 +241,10 @@ export function SavedViewProvider({ children, projectId, viewType, onApplyView }
     </SavedViewContext.Provider>
   );
 }
+
+// =============================================================================
+// Hook
+// =============================================================================
 
 export function useSavedViews(): SavedViewContextType {
   const context = useContext(SavedViewContext);
